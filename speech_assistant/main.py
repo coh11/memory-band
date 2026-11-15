@@ -5,7 +5,7 @@
         -> rules engine (instant + every 2 s) -> nudges -> live screen + ElevenLabs voice
 
 Run from the project folder (so .env is found):
-    uvicorn main:app --app-dir Backend --reload --port 8000
+    uvicorn main:app --app-dir speech_assistant --reload --port 8000
 then open http://127.0.0.1:8000
 """
 import asyncio

@@ -1,6 +1,6 @@
 """The memory timeline: what was heard, what it meant, and what we said back.
 
-SQLite in one file (Backend/memory.db). Every row is also pushed to the live screen
+SQLite in one file (speech_assistant/memory.db). Every row is also pushed to the live screen
 through `hub`, so the page updates the moment something happens.
 """
 import json

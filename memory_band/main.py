@@ -1,15 +1,15 @@
 """Memory Band, Charles's version: passive door check, phone push alerts, double-tap
-confirmation, fall alert. Runs beside Mamoune's Backend/ on its own port:
+confirmation, fall alert. Runs beside Mamoune's speech_assistant/ on its own port:
 
-    .venv/bin/uvicorn charles.main:app --port 8001          (from the repo root)
+    .venv/bin/uvicorn memory_band.main:app --port 8001          (from the repo root)
     open http://127.0.0.1:8001/  (dashboard)    http://127.0.0.1:8001/docs  (API)
 """
 from fastapi import FastAPI
 
 if __package__:
-    from .memory import api as memory_api            # uvicorn charles.main:app (repo root)
+    from .memory import api as memory_api            # uvicorn memory_band.main:app (repo root)
 else:
-    from memory import api as memory_api             # cd charles && uvicorn main:app
+    from memory import api as memory_api             # cd memory_band && uvicorn main:app
 
 app = FastAPI(title="Memory Band (Charles)")
 app.middleware("http")(memory_api.tunnel_guard)     # requests through a tunnel need MEMORY_TOKEN

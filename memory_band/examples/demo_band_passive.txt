@@ -1,5 +1,5 @@
 # The real listener code on the kit's pretend band, no speech at all:
-#   .venv/bin/python charles/band_listener.py --sim --script charles/demo_band_passive.txt
+#   .venv/bin/python memory_band/band_bridge.py --sim --script memory_band/examples/demo_band_passive.txt
 # Pretend-band actions: @twist @lock-sound  @pill (= @cap-twist, @rattle, @to-mouth)
 #   @set-down (hand down + clack)  @walk / @stop (band step counter)  @pickup   @leave (phone)
 2  | @leave

@@ -1,14 +1,14 @@
 """The band's ears: band microphone -> Deepgram -> each finished sentence -> the backend.
 
-    python3 bridge.py <your band number>      your band over Bluetooth (double-tap it first)
-    python3 bridge.py <number> --usb          the USB cable
-    python3 bridge.py --sim                   pretend band: plays the kit's sample recording
-    python3 bridge.py --say "okay, locking up"    typed words, no band and no Deepgram key
+    python3 speech_assistant/bridge.py <your band number>      your band over Bluetooth (double-tap it first)
+    python3 speech_assistant/bridge.py <number> --usb          the USB cable
+    python3 speech_assistant/bridge.py --sim                   pretend band: plays the kit's sample recording
+    python3 speech_assistant/bridge.py --say "okay, locking up"    typed words, no band and no Deepgram key
 
 A tap on the band answers the latest nudge, so it stops escalating to the family.
 
 Needs: python3 -m pip install bleak   (Bluetooth), and DEEPGRAM_API_KEY in .env or the
-environment. Start the backend first: uvicorn main:app --app-dir Backend --port 8000
+environment. Start the backend first: uvicorn main:app --app-dir speech_assistant --port 8000
 Everything the microphone hears is sent to Deepgram: tell the people near the band.
 """
 import json
@@ -18,7 +18,7 @@ import threading
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "vexo-open-kit" / "examples" / "python"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vexo-open-kit" / "examples" / "python"))
 import kit      # finds the library and reads the command line  # noqa: E402
 import speech   # sound -> Deepgram                               # noqa: E402
 from vexo_open.sync import Band  # noqa: E402

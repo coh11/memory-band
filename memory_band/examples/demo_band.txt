@@ -1,4 +1,4 @@
-# For: .venv/bin/python charles/band_listener.py <band number> --sim --script charles/demo_band.txt
+# For: .venv/bin/python memory_band/band_bridge.py <band number> --sim --script memory_band/examples/demo_band.txt
 # seconds-from-start | words (as if Deepgram heard them) or a band action:
 #   @double-tap @fall @twist (key turn) @wave (not a key turn) @lock-sound @knock
 #   @walk-away / @back (band signal to the Mac) @leave / @arrive (phone location)

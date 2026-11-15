@@ -4,7 +4,7 @@
 
 **What this does.** The Vexo band on the wrist notices these things **passively**, without the wearer saying or pressing anything. Push notifications go to the wearer's phone and, if nothing happens, to the family. The band has no speaker or vibration, so all feedback goes to the phone. A double-tap on the band means "yes, I did it / I'm fine".
 
-This version runs side by side with Mamoune's `Backend/` (port 8000) on **port 8001**. It reads the same `.env` at the repo root and uses the same kit folder, `./vexo-open-kit`.
+This version runs side by side with Mamoune's `speech_assistant/` (port 8000) on **port 8001**. It reads the same `.env` at the repo root and uses the same kit folder, `./vexo-open-kit`.
 
 ## What's different here
 
@@ -33,7 +33,7 @@ flowchart LR
     TAP[double-tap / free-fall]
     RSSI[Bluetooth signal]
   end
-  subgraph Mac["Home Mac: charles/band_listener.py"]
+  subgraph Mac["Home Mac: memory_band/band_bridge.py"]
     DEC[Opus decode] --> LOCK[lock-sound detector<br/>onset + spectral template]
     TW[key-turn twist detector]
     PRES[presence: weak signal / lost link]
@@ -49,7 +49,7 @@ flowchart LR
   PRES -->|/api/presence| API
   TAP -->|/api/tap, /api/fall| API
   DG -->|/api/transcript| API
-  subgraph Server["charles/main.py (FastAPI :8001)"]
+  subgraph Server["memory_band/main.py (FastAPI :8001)"]
     API[API] --> STORE[(SQLite)]
     API --> TAG[tagger: Gemini / OpenAI / keywords]
     LOOP[rules loop every 5 s] --> STORE
@@ -83,17 +83,17 @@ How: sounds use an onset detector plus a 24-band spectrogram (one clack) or a 1-
 Easiest: open **http://127.0.0.1:8001/setup** (or `http://<Mac's IP>:8001/setup` on a phone on the same Wi-Fi) while the listener runs. One step per screen: door lock sound, key turn, pill bottle, phone set-down, 3 times each, with Skip / use default and Redo, then a live "lock the door once" test. Or from the command line (stop the running listener first):
 
 ```bash
-.venv/bin/python charles/band_listener.py --calibrate-sound lock      # lock the door 3x (= --calibrate-lock)
-.venv/bin/python charles/band_listener.py --calibrate-twist           # turn the key 3x
-.venv/bin/python charles/band_listener.py --calibrate-sound pill      # shake out a pill 3x
-.venv/bin/python charles/band_listener.py --calibrate-sound setdown   # put the phone on the table 3x
+.venv/bin/python memory_band/band_bridge.py --calibrate-sound lock      # lock the door 3x (= --calibrate-lock)
+.venv/bin/python memory_band/band_bridge.py --calibrate-twist           # turn the key 3x
+.venv/bin/python memory_band/band_bridge.py --calibrate-sound pill      # shake out a pill 3x
+.venv/bin/python memory_band/band_bridge.py --calibrate-sound setdown   # put the phone on the table 3x
 ```
 
-Samples are saved in `charles/memory/data/` (`sound_lock.json`, `sound_pill.json`, `sound_setdown.json`, `lock_twist.json`). The band's light can't be used for feedback here: while the mic is on, the kit locks the LED to solid blue, so the page shows the progress.
+Samples are saved in `memory_band/memory/data/` (`sound_lock.json`, `sound_pill.json`, `sound_setdown.json`, `lock_twist.json`). The band's light can't be used for feedback here: while the mic is on, the kit locks the LED to solid blue, so the page shows the progress.
 
 ### Tuning at the venue
 
-`.venv/bin/python charles/band_listener.py --debug-sensors` prints every sound onset with its score for each action (lock / pill / setdown), its click count, brightness and how fast it dies away, plus every move (`lower` / `raise`, metres, tilt), every twist and, twice a second, gyro speed, |a|, tilt from rest, steps and walking. Raise `match_score` if other sounds match, lower it if yours are missed.
+`.venv/bin/python memory_band/band_bridge.py --debug-sensors` prints every sound onset with its score for each action (lock / pill / setdown), its click count, brightness and how fast it dies away, plus every move (`lower` / `raise`, metres, tilt), every twist and, twice a second, gyro speed, |a|, tilt from rest, steps and walking. Raise `match_score` if other sounds match, lower it if yours are missed.
 
 Door rule: the person leaves home (phone, or band signal as the fallback). If there was no `door_locked` in the 15 minutes before, the wearer gets a push about 15–20 seconds later (`door.grace_minutes`, demo setting) and the family 10 minutes after that. `door_locked` comes from a lock-sound match, a twist plus a click within 5 seconds, a double-tap answer, or speech ("I locked the door").
 
@@ -103,10 +103,10 @@ Door rule: the person leaves home (phone, or band signal as the fallback). If th
 # once
 git clone https://github.com/VexoAI-Org/vexo-open-kit.git      # kit at ./vexo-open-kit (gitignored)
 python3.11 -m venv .venv                                        # skip if .venv already exists
-.venv/bin/pip install -r charles/requirements.txt
+.venv/bin/pip install -r memory_band/requirements.txt
 ```
 
-Add these lines to the **repo-root `.env`** (see `charles/.env.example`; never commit it):
+Add these lines to the **repo-root `.env`** (see the repo-root `.env.example`; never commit it):
 
 ```
 BAND_NUMBER=<number on your band's bag>
@@ -118,21 +118,21 @@ MEMORY_TOKEN=<any long random string>      # protects the phone webhook
 
 ```bash
 # 1. server + dashboard (http://127.0.0.1:8001)
-.venv/bin/uvicorn charles.main:app --port 8001
+.venv/bin/uvicorn memory_band.main:app --port 8001
 
 # 2. band (double-tap the band first; close the kit dashboard: one connection at a time)
-.venv/bin/python charles/band_listener.py            # uses BAND_NUMBER, or pass the number
+.venv/bin/python memory_band/band_bridge.py            # uses BAND_NUMBER, or pass the number
 
 # calibrate once at your own door (band on the wrist you lock with)
-.venv/bin/python charles/band_listener.py --calibrate-lock     # lock the door 3x
-.venv/bin/python charles/band_listener.py --calibrate-twist    # turn the key 3x
+.venv/bin/python memory_band/band_bridge.py --calibrate-lock     # lock the door 3x
+.venv/bin/python memory_band/band_bridge.py --calibrate-twist    # turn the key 3x
 ```
 
 Listener options: `--debug-sensors`, `--speech on|off|auto` (default auto = on if `DEEPGRAM_API_KEY` is set), `--no-mic` (twist alone then counts as locked; no sounds), `--pill-shake`, `--door-sound`, `--usb`.
 
 ## End-to-end demo: forgot to lock → push → locked → resolved
 
-1. Terminal 1: `.venv/bin/uvicorn charles.main:app --port 8001`. Terminal 2: double-tap the band, then `.venv/bin/python charles/band_listener.py`.
+1. Terminal 1: `.venv/bin/uvicorn memory_band.main:app --port 8001`. Terminal 2: double-tap the band, then `.venv/bin/python memory_band/band_bridge.py`.
 2. Phone: ntfy app subscribed to the wearer topic (shown at the bottom of the dashboard).
 3. Dashboard → **Demo mode**: **Reset** → **Open setup** (calibrate the lock, or skip if done) → **Next** → **Leave home** (the same call the phone's geofence makes, `/api/leaving`).
 4. About 20 seconds later *"You didn't lock the door"* arrives on the phone; the demo card shows "Push sent".
@@ -143,7 +143,7 @@ Then the other two, no buttons needed:
 - **Phone left behind:** put the phone on the table (wrist down, clack). Stand up and walk ~10 steps: *"Don't forget your phone"* within about 5 s of walking. Go back, pause, lift the phone: ✅ *"You picked up your phone"*. (Pick it up, wait 4 s, then walk: no push.)
 - **Pill:** set the demo clock past a dose (`curl -X POST localhost:8001/api/clock -H 'content-type: application/json' -d '{"time":"09:35"}'`). The pill reminder arrives. Open the bottle (twist), shake out a pill (rattle), hand to mouth: ✅ *"Pill taken"*. Do it again more than 60 s later: *"Possible double dose"* to wearer and family. Reset the clock with `-d '{"reset":true}'`.
 
-No band? `.venv/bin/python charles/band_listener.py --sim` (pretend band) and act with `curl -X POST localhost:8001/api/sim/act -H 'content-type: application/json' -d '{"action":"@lock-sound"}'` (also `@twist`, `@pill`, `@set-down`, `@walk`, `@stop`, `@pickup`). Or play scripts: `charles/replay.py charles/demo_passive.txt` (server only) and `band_listener.py --sim --script charles/demo_band_passive.txt` (real listener code). Offline detector checks: `.venv/bin/python charles/test_passive.py`.
+No band? `.venv/bin/python memory_band/band_bridge.py --sim` (pretend band) and act with `curl -X POST localhost:8001/api/sim/act -H 'content-type: application/json' -d '{"action":"@lock-sound"}'` (also `@twist`, `@pill`, `@set-down`, `@walk`, `@stop`, `@pickup`). Or play scripts: `memory_band/replay.py memory_band/examples/demo_passive.txt` (server only) and `band_bridge.py --sim --script memory_band/examples/demo_band_passive.txt` (real listener code). Offline detector checks: `.venv/bin/python tests/test_passive.py`.
 
 ### Phone notifications (2 minutes)
 
@@ -173,11 +173,11 @@ Test it from a terminal: `curl -X POST "https://<tunnel>/api/leaving?token=<MEMO
 ## Demo with no band
 
 ```bash
-.venv/bin/uvicorn charles.main:app --port 8001        # terminal 1 (NTFY_DRY_RUN=1 to only print pushes)
-.venv/bin/python charles/replay.py                    # terminal 2: a whole day in ~1 minute
+.venv/bin/uvicorn memory_band.main:app --port 8001        # terminal 1 (NTFY_DRY_RUN=1 to only print pushes)
+.venv/bin/python memory_band/replay.py                    # terminal 2: a whole day in ~1 minute
 ```
 
-`replay.py` moves the server's demo clock through `charles/demo_day.txt`: 07:30 to 18:30. Along the way it shows these:
+`replay.py` moves the server's demo clock through `memory_band/examples/demo_day.txt`: 07:30 to 18:30. Along the way it shows these:
 
 - The stove alert, then a double-tap.
 - Lock sound followed by leaving: no alert.
@@ -194,7 +194,7 @@ Test it from a terminal: `curl -X POST "https://<tunnel>/api/leaving?token=<MEMO
 
 Use `--pause 4` for a slower live demo. It wipes data first; use `--keep` to keep it.
 
-To run the real band code path on the kit's pretend band: `.venv/bin/python charles/band_listener.py <band number> --sim --script charles/demo_band.txt`. It covers a fall, double-tap, twist, lock click, phone leave/arrive, and signal fade.
+To run the real band code path on the kit's pretend band: `.venv/bin/python memory_band/band_bridge.py <band number> --sim --script memory_band/examples/demo_band.txt`. It covers a fall, double-tap, twist, lock click, phone leave/arrive, and signal fade.
 
 **60-second pitch flow.** Show the dashboard. Run `replay.py --pause 3`. Point at the door alert arriving on the phone, then the twist plus click resolving it. Then show the fall alert reaching the family phone.
 
@@ -205,13 +205,13 @@ To run the real band code path on the kit's pretend band: `.venv/bin/python char
 ## Files
 
 ```
-charles/
+memory_band/
   main.py            FastAPI app (port 8001): dashboard at /, API at /api
   memory/            server package: api.py (routes), rules.py (proactive rules + escalation),
                      service.py (events, answers), tagger.py (Gemini/OpenAI/keywords), store.py (SQLite),
                      notify.py (ntfy), clock.py (demo clock), config.json (times, thresholds),
                      static/index.html (dashboard), data/ (db, topics, calibration; gitignored)
-  band_listener.py   band -> server: sounds, twists, moves, walking, presence, double-tap, fall,
+  band_bridge.py   band -> server: sounds, twists, moves, walking, presence, double-tap, fall,
                      calibration (setup page or CLI), --debug-sensors, optional speech
   sounds.py          calibrated sounds: lock / pill rattle / phone set-down (numpy) + synthetic sounds
   passive.py         twist, up/down moves, gestures (set-down, pick-up, hand to mouth), walking, presence

@@ -1,6 +1,6 @@
-# The three passive actions, no speech at all. replay.py sends exactly what band_listener.py
+# The three passive actions, no speech at all. replay.py sends exactly what band_bridge.py
 # sends when the band's mic + motion sensor notice each step.
-#   .venv/bin/python charles/replay.py charles/demo_passive.txt --pause 2
+#   .venv/bin/python memory_band/replay.py memory_band/examples/demo_passive.txt --pause 2
 # Actions: @lock (key-turn twist + click) @lock-sound (calibrated lock clack) @leave / @arrive
 #          @pill = @cap-twist + @rattle + @to-mouth      @set-down = @lower (hand down, rests) + @clack
 #          @pickup (hand lifts from where it set the phone down)   @walk (band counted ~10 steps)

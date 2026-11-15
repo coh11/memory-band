@@ -1,6 +1,6 @@
 """Hear everyday actions with the band's mic: one detector, any number of calibrated sounds.
 
-Actions (calibrate each with 3 samples: band_listener.py --calibrate-sound lock|pill|setdown):
+Actions (calibrate each with 3 samples: band_bridge.py --calibrate-sound lock|pill|setdown):
   lock     your front-door lock / deadbolt clack   -> "lock_sound" (or "click" when only close)
   pill     your pill bottle rattling                -> "pill_rattle"
   setdown  your phone / wallet set down on a table  -> "setdown_clack"

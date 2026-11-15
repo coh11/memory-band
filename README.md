@@ -30,7 +30,7 @@ Setup is designed for an older person: there's no app to install. A simple brows
 
 ```mermaid
 flowchart LR
-  BAND["Vexo band<br/>mic, motion, taps, Bluetooth signal"] -->|BLE| L["band_listener.py<br/>on the home Mac"]
+  BAND["Vexo band<br/>mic, motion, taps, Bluetooth signal"] -->|BLE| L["band_bridge.py<br/>on the home Mac"]
   PHONE["Phone: 'left home'"] --> API
   L -->|gestures, sounds, presence| API["FastAPI server :8001<br/>SQLite + rules loop every 5 s"]
   API -->|ntfy push| W["Wearer's phone"]
@@ -38,8 +38,8 @@ flowchart LR
   API --> D["Dashboard + setup page"]
 ```
 
-- **Passive detection** (`charles/passive.py`, `charles/sounds.py`): onset detection plus spectral templates for sounds, gyro and accelerometer for twists, wrist height, set-down, pick-up and walking. NumPy only, matched against your own calibration samples.
-- **Rules engine** (`charles/memory/rules.py`): every alert goes open → pushed → escalated or resolved, with the time it took to fix.
+- **Passive detection** (`memory_band/passive.py`, `memory_band/sounds.py`): onset detection plus spectral templates for sounds, gyro and accelerometer for twists, wrist height, set-down, pick-up and walking. NumPy only, matched against your own calibration samples.
+- **Rules engine** (`memory_band/memory/rules.py`): every alert goes open → pushed → escalated or resolved, with the time it took to fix.
 - **Optional speech** (Deepgram): reminders like "dentist Tuesday at 3", and "where did I put my keys?"
 
 ## Run it
@@ -48,19 +48,19 @@ Needs Python 3.9+, a Vexo Open band, and the [Vexo Open Kit](https://github.com/
 
 ```bash
 python3.11 -m venv .venv && source .venv/bin/activate
-pip install -r charles/requirements.txt
-cp env.example .env          # add BAND_NUMBER (and DEEPGRAM_API_KEY if you want speech); never commit .env
+pip install -r memory_band/requirements.txt
+cp .env.example .env          # add BAND_NUMBER (and DEEPGRAM_API_KEY if you want speech); never commit .env
 
-uvicorn charles.main:app --host 0.0.0.0 --port 8001     # server + dashboard
-python charles/band_listener.py                          # connects to your band (or --sim to try without one)
+uvicorn memory_band.main:app --host 0.0.0.0 --port 8001     # server + dashboard
+python memory_band/band_bridge.py                          # connects to your band (or --sim to try without one)
 ```
 
-Then open `http://127.0.0.1:8001/setup` and follow the steps. More detail, including all thresholds, is in [`charles/README.md`](charles/README.md).
+Then open `http://127.0.0.1:8001/setup` and follow the steps. More detail, including all thresholds, is in [`memory_band/README.md`](memory_band/README.md).
 
 ## Repo layout
 
-- `charles/`: the full Memory Band app (passive detection, rules, push notifications, setup page, dashboard).
-- `Backend/` + `bridge.py`: an alternative speech-first version with on-screen alerts and voice replies.
+- `memory_band/`: the full Memory Band app (passive detection, rules, push notifications, setup page, dashboard).
+- `speech_assistant/` + `speech_assistant/bridge.py`: an alternative speech-first version with on-screen alerts and voice replies.
 
 ## Tech
 

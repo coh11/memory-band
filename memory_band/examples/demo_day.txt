@@ -1,5 +1,5 @@
 # A scripted day for the Memory Band demo. replay.py sends each line to the server.
-# Format:  HH:MM | @action  (passive signals: exactly what band_listener.py / the phone send)
+# Format:  HH:MM | @action  (passive signals: exactly what band_bridge.py / the phone send)
 #          HH:MM | words    (optional speech path, as if Deepgram heard them)
 # Actions: @double-tap  band double-tap = "yes, I did it / I'm fine"
 #          @fall        band felt a fall

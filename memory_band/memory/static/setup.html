@@ -75,7 +75,7 @@ function drawBar() {
   lw.hidden = status.listener_alive;
   if (!status.listener_alive) {
     lw.replaceChildren(document.createTextNode("The band listener isn't running, so the band can't record. On the Mac, in the repo folder, run: "),
-                       el("code", null, ".venv/bin/python charles/band_listener.py"), document.createTextNode(" (double-tap the band first)."));
+                       el("code", null, ".venv/bin/python memory_band/band_bridge.py"), document.createTextNode(" (double-tap the band first)."));
   }
 }
 

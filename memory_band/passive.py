@@ -1,8 +1,8 @@
-"""Passive signals from the band, no speaking needed. Used by band_listener.py.
+"""Passive signals from the band, no speaking needed. Used by band_bridge.py.
 
 TwistDetector  - a key / deadbolt turn: the wrist rotates ~70-180 degrees about one axis
                  (the forearm) in about a second, then stops. Calibrate with your own door:
-                 band_listener.py N --calibrate-twist (3 twists -> data/lock_twist.json).
+                 band_bridge.py N --calibrate-twist (3 twists -> data/lock_twist.json).
 ShakeDetector  - shaking a pill bottle (optional): fast up-and-down acceleration, 3+ times.
 Presence       - home / away from the band's Bluetooth signal to the home Mac, like the kit's
                  band-leash project: weak signal or lost link for `grace_seconds` = left home.

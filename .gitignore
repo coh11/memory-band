@@ -4,4 +4,5 @@ __pycache__/
 .env
 .DS_Store
 vexo-open-kit/
-Backend/*.db
+speech_assistant/*.db
+memory_band/memory/data/

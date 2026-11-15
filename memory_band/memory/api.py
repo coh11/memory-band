@@ -1,4 +1,4 @@
-"""HTTP API for Memory Band, as an APIRouter that charles/main.py includes under /api,
+"""HTTP API for Memory Band, as an APIRouter that memory_band/main.py includes under /api,
 plus the background rules loop."""
 import logging
 import threading
@@ -211,7 +211,7 @@ def demo_sound(what: str):
 
 
 # ---- calibration from the setup page ---------------------------------------------------
-# The page asks for a calibration here; the running band_listener.py polls GET
+# The page asks for a calibration here; the running band_bridge.py polls GET
 # /calibrate/status, records the samples from the live band and reports back with
 # POST /calibrate/progress. No restart, no command line.
 CAL_ACTIONS = {"lock": "Door lock sound", "twist": "Key-turn twist", "pill": "Pill bottle", "setdown": "Phone set-down",
@@ -261,7 +261,7 @@ def calibrate_status():
 
 @router.post("/listener/heartbeat")
 def listener_heartbeat(body: dict):
-    """band_listener.py calls this every second: it is alive, which actions it has calibrated,
+    """band_bridge.py calls this every second: it is alive, which actions it has calibrated,
     and it gets the current calibration request back (it starts one in state "waiting")."""
     store.kv_set("listener", {"seen": time.time(), "calibrated": body.get("calibrated", {}), "mic": body.get("mic"),
                               "sim": body.get("sim")})
@@ -278,7 +278,7 @@ class SimAct(BaseModel):
 
 @router.post("/sim/act")
 def sim_act(body: SimAct):
-    """Pretend band only (band_listener.py --sim): queue an action for it to act out.
+    """Pretend band only (band_bridge.py --sim): queue an action for it to act out.
     "flush" / "paper" also work with the real band: the server records them directly."""
     act = body.action.lstrip("@")
     sim_on = (store.kv_get("listener") or {}).get("sim")

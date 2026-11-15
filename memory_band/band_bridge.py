@@ -14,16 +14,16 @@ Passive first (nothing to say or press). The band's mic and motion sensor only:
 Optional extra: speech (Deepgram) -> sentences -> the server's tagger.
 Calibration: from the setup page (http://127.0.0.1:8001/setup) while this runs, or the CLI below.
 
-Run from the repo root while the server runs (.venv/bin/uvicorn charles.main:app --port 8001):
-  .venv/bin/python charles/band_listener.py 17                       # your band number, or BAND_NUMBER in .env
-  .venv/bin/python charles/band_listener.py --calibrate-sound lock   # your lock's sound 3x (= --calibrate-lock)
-  .venv/bin/python charles/band_listener.py --calibrate-sound pill   # shake your pill bottle 3x
-  .venv/bin/python charles/band_listener.py --calibrate-sound setdown  # put your phone on the table 3x
-  .venv/bin/python charles/band_listener.py --calibrate-sound flush  # optional: flush your toilet 3x
-  .venv/bin/python charles/band_listener.py --calibrate-sound paper  # optional: pull toilet paper off the roll 3x
-  .venv/bin/python charles/band_listener.py --calibrate-twist        # record your key-turn twist 3x
-  .venv/bin/python charles/band_listener.py --debug-sensors          # live sound scores + motion numbers
-  .venv/bin/python charles/band_listener.py 17 --sim --script charles/demo_band.txt   # pretend band
+Run from the repo root while the server runs (.venv/bin/uvicorn memory_band.main:app --port 8001):
+  .venv/bin/python memory_band/band_bridge.py 17                       # your band number, or BAND_NUMBER in .env
+  .venv/bin/python memory_band/band_bridge.py --calibrate-sound lock   # your lock's sound 3x (= --calibrate-lock)
+  .venv/bin/python memory_band/band_bridge.py --calibrate-sound pill   # shake your pill bottle 3x
+  .venv/bin/python memory_band/band_bridge.py --calibrate-sound setdown  # put your phone on the table 3x
+  .venv/bin/python memory_band/band_bridge.py --calibrate-sound flush  # optional: flush your toilet 3x
+  .venv/bin/python memory_band/band_bridge.py --calibrate-sound paper  # optional: pull toilet paper off the roll 3x
+  .venv/bin/python memory_band/band_bridge.py --calibrate-twist        # record your key-turn twist 3x
+  .venv/bin/python memory_band/band_bridge.py --debug-sensors          # live sound scores + motion numbers
+  .venv/bin/python memory_band/band_bridge.py 17 --sim --script memory_band/examples/demo_band.txt   # pretend band
 
 The band takes one Bluetooth connection at a time: close the kit dashboard first, and
 double-tap the band right before starting so it can be found for 60 seconds. While the mic
@@ -655,7 +655,7 @@ def main():
     p.add_argument("--sim", action="store_true", help="use the kit's pretend band (no hardware)")
     p.add_argument("--usb", action="store_true", help="use the USB cable instead of Bluetooth (no signal strength)")
     p.add_argument("--server", default=os.environ.get("MEMORY_SERVER", "http://127.0.0.1:8001"))
-    p.add_argument("--script", help="timed sentences / band actions instead of real life (see demo_band.txt)")
+    p.add_argument("--script", help="timed sentences / band actions instead of real life (see examples/demo_band.txt)")
     p.add_argument("--speech", choices=["auto", "on", "off"], default="auto",
                    help="Deepgram speech-to-text: auto = on when DEEPGRAM_API_KEY is set")
     p.add_argument("--no-mic", action="store_true", help="keep the microphone off (no sounds, no speech)")

@@ -1,5 +1,5 @@
 """Offline checks for the passive detectors with synthetic signals (no band, no server):
-    .venv/bin/python charles/test_passive.py
+    .venv/bin/python tests/test_passive.py
 Sounds: lock / pill rattle / phone set-down, calibrated and not, plus things that must NOT
 count (knock, voice, hum). Motion: set-down, pick-up, hand-to-mouth, a twist that is not an
 up/down move, walking (band step counter and accelerometer), and standing up to walk away
@@ -10,7 +10,7 @@ import numpy as np
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "memory_band"))
 import lock_sound  # noqa: E402
 import passive as P  # noqa: E402
 import sounds  # noqa: E402

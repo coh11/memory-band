@@ -1,9 +1,9 @@
 """Play a scripted day (demo_day.txt) into the Memory Band server: no band needed.
 
-    .venv/bin/python charles/replay.py                     # whole day, 1.5 s between lines
-    .venv/bin/python charles/replay.py --pause 0           # as fast as possible (tests)
-    .venv/bin/python charles/replay.py --pause 4 --keep    # slower, keep earlier data
-    .venv/bin/python charles/replay.py --real-clock        # don't move the demo clock
+    .venv/bin/python memory_band/replay.py                     # whole day, 1.5 s between lines
+    .venv/bin/python memory_band/replay.py --pause 0           # as fast as possible (tests)
+    .venv/bin/python memory_band/replay.py --pause 4 --keep    # slower, keep earlier data
+    .venv/bin/python memory_band/replay.py --real-clock        # don't move the demo clock
 
 Each line moves the server's demo clock to its time (POST /api/clock), then sends the words
 (POST /api/transcript), a double-tap (POST /api/tap) or a fall (POST /api/fall). At the end it
@@ -18,7 +18,7 @@ import requests
 
 HERE = Path(__file__).resolve().parent
 
-# What band_listener.py and the phone send for each passive action.
+# What band_bridge.py and the phone send for each passive action.
 PASSIVE = {
     "@leave": ("/leaving", {}),
     "@arrive": ("/arrived", {}),
@@ -46,7 +46,7 @@ del PASSIVE["@lock"]
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("script", nargs="?", default=str(HERE / "demo_day.txt"))
+    p.add_argument("script", nargs="?", default=str(HERE / "examples" / "demo_day.txt"))
     p.add_argument("--server", default="http://127.0.0.1:8001")
     p.add_argument("--token", default=os.environ.get("MEMORY_TOKEN", ""), help="MEMORY_TOKEN, if the server uses one")
     p.add_argument("--pause", type=float, default=1.5, help="real seconds between lines")
@@ -59,7 +59,7 @@ def main():
     try:
         s.get(api + "/state", timeout=5).raise_for_status()
     except requests.RequestException:
-        sys.exit("The server is not running at %s. Start it first: .venv/bin/uvicorn charles.main:app --port 8001" % a.server)
+        sys.exit("The server is not running at %s. Start it first: .venv/bin/uvicorn memory_band.main:app --port 8001" % a.server)
     if not a.keep:
         s.post(api + "/reset", timeout=5)
 

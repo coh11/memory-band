@@ -1,0 +1,10 @@
+# Memory Band (Charles): install with  .venv/bin/pip install -r memory_band/requirements.txt
+fastapi
+uvicorn
+requests
+python-dotenv
+pydantic
+numpy          # lock-sound detector
+# band_bridge.py: real band over Bluetooth + the kit's Opus decoder
+bleak
+av
