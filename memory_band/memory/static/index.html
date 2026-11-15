@@ -96,6 +96,23 @@
   #demo-card { border:2px solid var(--ok); }
   @media (max-width:600px) { header, main { padding-left:14px; padding-right:14px; } h1 { font-size:30px; } }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+
+  /* ---- right now: summary + needs a look + compact list ---- */
+  .summary { font-size:30px; font-weight:700; padding:14px 18px; border-radius:6px; margin-bottom:14px; }
+  .summary.ok { background:#eef6ef; color:var(--ok); } .summary.warn { background:#fff6e2; color:var(--warn); } .summary.bad { background:#fdecec; color:var(--bad); }
+  #status .tile { display:flex; gap:16px; align-items:flex-start; min-height:0; border:2px solid; border-left-width:2px; padding:18px 20px; }
+  #status .tile.bad { border-color:var(--bad); background:#fff7f7; } #status .tile.warn { border-color:#c98a00; background:#fffbf1; }
+  #status .tile .mark { flex:0 0 44px; height:44px; border-radius:50%; color:#fff; font-weight:800; font-size:26px; display:flex; align-items:center; justify-content:center; }
+  #status .tile.bad .mark { background:var(--bad); } #status .tile.warn .mark { background:#c98a00; }
+  #status .tile .value { font-size:30px; }
+  .okhead { font-size:20px; font-weight:700; color:var(--muted); margin:20px 0 6px; text-transform:uppercase; letter-spacing:.04em; }
+  .oklist { display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); column-gap:32px; }
+  .okrow { display:flex; align-items:center; gap:14px; padding:12px 4px; border-bottom:1px solid var(--line); font-size:22px; }
+  .okrow .mark { flex:0 0 32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; }
+  .okrow.ok .mark { background:#e3f1e5; color:var(--ok); } .okrow.none .mark { background:#eeebe3; color:var(--muted); }
+  .okrow .label { flex:0 0 210px; color:var(--muted); font-weight:600; }
+  .okrow .value { font-weight:650; } .okrow.ok .value { color:var(--ok); }
+  @media (max-width:600px) { .oklist { grid-template-columns:1fr; } .okrow .label { flex-basis:120px; } }
 </style>
 </head>
 <body>
@@ -114,7 +131,10 @@
 
   <section class="card wide">
     <h2>Right now</h2>
+    <div id="summary" class="summary"></div>
     <div class="status" id="status"></div>
+    <div id="okhead" class="okhead">All good</div>
+    <div class="oklist" id="oklist"></div>
   </section>
 
   <section class="card wide">
@@ -125,12 +145,6 @@
   <section class="card wide">
     <h2>Done today</h2>
     <div id="resolved"></div>
-  </section>
-
-  <section class="card">
-    <h2>Ask a question</h2>
-    <form id="askform"><input type="text" id="q" placeholder="Where are my keys?" autocomplete="off"><button>Ask</button></form>
-    <div id="answer"></div>
   </section>
 
   <section class="card">
@@ -177,10 +191,29 @@ const PILL = { taken: ["Taken", "ok"], double: ["Taken twice!", "bad"], later: [
 const KIND = { heard: "heard", pill_taken: "pill", door_locked: "door", leaving_home: "leaving", leaving_place: "leaving", item_placed: "item", item_picked_up: "item", stove_on: "stove", stove_off: "stove", person: "person", appointment: "appointment", promise: "promise", fall: "fall", fall_cancelled: "fall", arrived_home: "home", pill_bottle: "pill", door_sound: "sound", double_tap: "band", tap: "band", help: "help", fine: "ok", lock_sound: "door", lock_twist: "door", click: "door", pill_rattle: "pill", cap_twist: "pill", to_mouth: "pill", set_down: "phone", setdown_clack: "phone", impact: "phone", toilet_flush: "bathroom", toilet_paper: "bathroom", drink_noticed: "water", band_off_wrist: "band", band_on_wrist: "band" };
 const HIDE = new Set(["set_down", "impact", "setdown_clack", "cap_twist", "to_mouth", "pill_rattle", "click", "lock_twist"]);
 
-function tile(label, value, cls) {
-  const t = el("div", "tile " + (cls || ""));
-  t.append(el("div", "label", label), el("div", "value", value));
-  return t;
+function tile(label, value, cls) { return { label, value, cls: cls || "" }; }
+const RANK = { bad: 0, warn: 1, "": 2, ok: 3 };
+const MARK = { bad: "!", warn: "!", "": "–", ok: "✓" };
+function renderStatus(items) {
+  const look = items.filter((i) => i.cls === "bad" || i.cls === "warn").sort((a, b) => RANK[a.cls] - RANK[b.cls]);
+  const rest = items.filter((i) => !(i.cls === "bad" || i.cls === "warn")).sort((a, b) => RANK[b.cls] - RANK[a.cls]);
+  const sum = $("summary");
+  sum.className = "summary " + (look.some((i) => i.cls === "bad") ? "bad" : (look.length ? "warn" : "ok"));
+  sum.textContent = look.length ? `${look.length} thing${look.length > 1 ? "s" : ""} need${look.length > 1 ? "" : "s"} a look` : "Everything looks fine";
+  const st = $("status"); st.replaceChildren(); st.hidden = !look.length;
+  look.forEach((i) => {
+    const t = el("div", "tile " + i.cls);
+    t.append(el("div", "mark", MARK[i.cls]));
+    const txt = el("div", "txt"); txt.append(el("div", "label", i.label), el("div", "value", i.value));
+    t.append(txt); st.append(t);
+  });
+  const ok = $("oklist"); ok.replaceChildren();
+  $("okhead").textContent = look.length ? "Everything else" : "All good";
+  rest.forEach((i) => {
+    const r = el("div", "okrow " + (i.cls || "none"));
+    r.append(el("span", "mark", MARK[i.cls]), el("span", "label", i.label), el("span", "value", i.value));
+    ok.append(r);
+  });
 }
 function list(id, items, render, empty) {
   const ul = $(id); ul.replaceChildren();
@@ -198,7 +231,7 @@ function render(s) {
   $("band").textContent = b.connected ? `band ${b.name || ""} connected` : "band not connected";
   $("engine").textContent = "understanding: " + s.tagger;
 
-  const st = $("status"); st.replaceChildren();
+  const items = []; const st = { append: (x) => items.push(x) };
   s.pills.forEach((p) => {
     const [txt, cls] = PILL[p.status] || [p.status, ""];
     st.append(tile(`${p.name.charAt(0).toUpperCase() + p.name.slice(1)} · ${p.time}`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
@@ -221,6 +254,7 @@ function render(s) {
   st.append(tile("Bathroom", flushAlert ? "Toilet not flushed?" : (bt.flushes_today ? `${bt.flushes_today} flush${bt.flushes_today > 1 ? "es" : ""} today, last at ${bt.last_at}` : "No flush heard today"),
                  flushAlert ? "warn" : (bt.flushes_today ? "ok" : "")));
   st.append(tile("Fall", s.fall.active ? `Checking… ${s.fall.seconds_left}s` : "No fall", s.fall.active ? "bad" : "ok"));
+  renderStatus(items);
 
   const fb = $("fallbar");
   fb.className = s.fall.active ? "on" : "";
@@ -228,7 +262,7 @@ function render(s) {
 
   const al = $("alerts"); al.replaceChildren();
   const open = s.alerts.filter((a) => !a.acked && !a.resolved);
-  if (!open.length) al.append(el("div", "empty allgood", "All good ✓  Nothing needs your attention."));
+  if (!open.length) al.append(el("div", "empty allgood", "No alerts right now."));
   open.forEach((a) => {
     const box = el("div", "alert " + a.level);
     const body = el("div");
@@ -320,12 +354,6 @@ function demoRender(s) {
 async function refresh() {
   try { const r = await fetch("/api/state"); if (r.ok) render(await r.json()); } catch (e) { $("now").textContent = "Server not reachable"; }
 }
-$("askform").onsubmit = async (ev) => {
-  ev.preventDefault();
-  const q = $("q").value.trim(); if (!q) return;
-  const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
-  $("answer").textContent = (await r.json()).answer;
-};
 refresh(); setInterval(refresh, 2000);
 </script>
 </body>
