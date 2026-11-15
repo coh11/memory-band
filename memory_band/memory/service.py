@@ -16,7 +16,7 @@ EVENT_TEXT = {
 
 
 def handle_presence(state_name, reason="", rssi=None, now=None, source="band"):
-    """From the band's Bluetooth signal to the home Mac (band_listener.py Presence)."""
+    """From the band's Bluetooth signal to the home Mac (band_bridge.py Presence)."""
     now = now if now is not None else clock.now()
     with rules.LOCK:
         was = (store.kv_get("presence") or {}).get("state", "home")
