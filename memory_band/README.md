@@ -4,7 +4,7 @@
 
 **What this does.** The Vexo band on the wrist notices these things **passively**, without the wearer saying or pressing anything. Push notifications go to the wearer's phone and, if nothing happens, to the family. The band has no speaker or vibration, so all feedback goes to the phone. A double-tap on the band means "yes, I did it / I'm fine".
 
-This version runs side by side with Mamoune's `speech_assistant/` (port 8000) on **port 8001**. It reads the same `.env` at the repo root and uses the same kit folder, `./vexo-open-kit`.
+This version runs side by side with the speech-first `speech_assistant/` (port 8000) on **port 8001**. It reads the same `.env` at the repo root and uses the same kit folder, `./vexo-open-kit`.
 
 ## What's different here
 

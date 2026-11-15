@@ -10,7 +10,7 @@ REPO = PKG.parent
 DATA = Path(os.environ.get("MEMORY_DATA_DIR", str(HERE / "data")))
 DATA.mkdir(parents=True, exist_ok=True)
 
-try:  # one .env at the repo root (shared with Mamoune's version); real environment variables win
+try:  # one .env at the repo root; real environment variables win
     from dotenv import load_dotenv
     for p in (REPO / ".env", PKG / ".env"):
         if p.exists():

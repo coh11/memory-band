@@ -1,5 +1,5 @@
 """Memory Band: passive door check, phone push alerts, double-tap
-confirmation, fall alert. Runs beside Mamoune's speech_assistant/ on its own port:
+confirmation, fall alert. Runs beside speech_assistant/ on its own port:
 
     .venv/bin/uvicorn memory_band.main:app --port 8001          (from the repo root)
     open http://127.0.0.1:8001/  (dashboard)    http://127.0.0.1:8001/docs  (API)
