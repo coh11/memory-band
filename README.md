@@ -63,7 +63,3 @@ Then open `http://127.0.0.1:8001/setup` and follow the steps. More detail, inclu
 ## Tech
 
 Vexo Open band (BLE), Python, FastAPI, SQLite, NumPy, ntfy, Deepgram (optional).
-
-## Team
-
-Charles (Younghoon) Oh ([@coh11](https://github.com/coh11)) and Mamoune ([@melboukfaoui](https://github.com/melboukfaoui)).
