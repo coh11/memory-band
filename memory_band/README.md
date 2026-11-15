@@ -1,4 +1,4 @@
-# Memory Band (Charles's version)
+# Memory Band
 
 **The problem.** Older adults with early memory loss forget things: whether they locked the front door, whether they took the morning pill (or took it twice), the phone left on a restaurant table, the stove left on. Families worry and call to check. Most reminder apps need the person to remember to use the app. That doesn't work for someone who is forgetting.
 

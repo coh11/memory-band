@@ -5,14 +5,14 @@ import secrets
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-CHARLES = HERE.parent
-REPO = CHARLES.parent
+PKG = HERE.parent
+REPO = PKG.parent
 DATA = Path(os.environ.get("MEMORY_DATA_DIR", str(HERE / "data")))
 DATA.mkdir(parents=True, exist_ok=True)
 
 try:  # one .env at the repo root (shared with Mamoune's version); real environment variables win
     from dotenv import load_dotenv
-    for p in (REPO / ".env", CHARLES / ".env"):
+    for p in (REPO / ".env", PKG / ".env"):
         if p.exists():
             load_dotenv(p, override=False)
 except ImportError:

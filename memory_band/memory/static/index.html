@@ -193,7 +193,7 @@ function list(id, items, render, empty) {
 async function ack(id) { await fetch(`/api/alerts/${id}/ack`, { method: "POST" }); refresh(); }
 
 function render(s) {
-  $("who").textContent = "· " + s.person;
+  $("who").textContent = "";
   $("now").textContent = s.now_text;
   $("demo").hidden = !s.demo_clock;
   const b = s.band || {};

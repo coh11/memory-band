@@ -1,4 +1,4 @@
-# Memory Band (Charles): install with  .venv/bin/pip install -r memory_band/requirements.txt
+# Memory Band: install with  .venv/bin/pip install -r memory_band/requirements.txt
 fastapi
 uvicorn
 requests
