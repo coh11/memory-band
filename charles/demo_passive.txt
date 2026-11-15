@@ -1,0 +1,27 @@
+# The three passive actions, no speech at all. replay.py sends exactly what band_listener.py
+# sends when the band's mic + motion sensor notice each step.
+#   .venv/bin/python charles/replay.py charles/demo_passive.txt --pause 2
+# Actions: @lock (key-turn twist + click) @lock-sound (calibrated lock clack) @leave / @arrive
+#          @pill = @cap-twist + @rattle + @to-mouth      @set-down = @lower (hand down, rests) + @clack
+#          @pickup (hand lifts from where it set the phone down)   @walk (band counted ~10 steps)
+#          @tick (only move the clock)  @double-tap
+
+# 1. Door: leave without locking -> push; lock it -> resolved with a follow-up push
+08:00 | @leave
+08:01 | @tick
+08:02 | @lock
+08:20 | @arrive
+# 2. Pill: 9:00 dose not taken -> reminder at 9:30; the band notices the pill -> resolved
+09:00 | @tick
+09:31 | @tick
+09:35 | @pill
+#    taking it again 20 minutes later -> double-dose warning to wearer + family
+09:55 | @pill
+# 3. Phone left behind: set down at a cafe table, walk away -> push; pick it up -> resolved
+12:15 | @set-down
+12:58 | @walk
+13:00 | @pickup
+#    set down, picked up, then walk away -> no push
+14:00 | @set-down
+14:10 | @pickup
+14:20 | @walk

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory Band</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#fff; --ink:#1d1d1f; --muted:#5f6368; --ok:#1e7d32; --warn:#b26a00; --bad:#c62828; --line:#e3dfd6; --accent:#2457c5; }
+  * { box-sizing: border-box; }
+  [hidden] { display:none !important; }
+  body { margin:0; background:var(--bg); color:var(--ink); font: 20px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:baseline; justify-content:space-between; padding:20px 28px 8px; }
+  h1 { font-size:34px; margin:0; }
+  h2 { font-size:22px; margin:0 0 12px; }
+  .muted { color:var(--muted); }
+  .badge { display:inline-block; font-size:15px; padding:3px 10px; border-radius:999px; background:#ece8df; margin-left:8px; }
+  .badge.demo { background:#fff1c2; }
+  main { padding:8px 28px 40px; display:grid; gap:18px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px 20px; }
+  .wide { grid-column: 1 / -1; }
+  .status { display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:14px; }
+  .tile { border-radius:14px; padding:14px 16px; border:2px solid var(--line); }
+  .tile .label { font-size:16px; color:var(--muted); }
+  .tile .value { font-size:26px; font-weight:650; }
+  .tile.ok { border-color:#bfe3c3; background:#f1faf2; } .tile.ok .value { color:var(--ok); }
+  .tile.warn { border-color:#f3d39b; background:#fff8ec; } .tile.warn .value { color:var(--warn); }
+  .tile.bad { border-color:#f1b5b5; background:#fff1f1; } .tile.bad .value { color:var(--bad); }
+  .alert { display:flex; gap:14px; align-items:flex-start; justify-content:space-between; padding:14px 16px; border-radius:12px; margin-bottom:10px; border-left:8px solid var(--warn); background:#fff8ec; }
+  .alert.urgent { border-color:var(--bad); background:#fff1f1; }
+  .alert.info { border-color:var(--accent); background:#eef3ff; }
+  .alert.done { opacity:.55; background:#f4f4f4; border-color:#bbb; }
+  .alert .t { font-weight:650; }
+  .alert .m { margin-top:2px; }
+  .alert .meta { font-size:15px; color:var(--muted); margin-top:4px; }
+  button { font:inherit; font-size:18px; border:0; border-radius:10px; padding:10px 16px; background:var(--accent); color:#fff; cursor:pointer; white-space:nowrap; }
+  button.light { background:#ece8df; color:var(--ink); }
+  form { display:flex; gap:10px; }
+  input[type=text] { flex:1; font:inherit; padding:10px 14px; border-radius:10px; border:2px solid var(--line); }
+  #answer { margin-top:12px; font-size:22px; min-height:1.5em; }
+  ul { list-style:none; padding:0; margin:0; }
+  li { padding:8px 0; border-bottom:1px solid var(--line); }
+  li:last-child { border-bottom:0; }
+  .time { display:inline-block; min-width:96px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .kind { font-size:14px; padding:2px 8px; border-radius:999px; background:#ece8df; margin-left:6px; }
+  .empty { color:var(--muted); font-style:italic; }
+  code { font-size:17px; background:#f0ede6; padding:2px 6px; border-radius:6px; }
+  #fallbar { display:none; }
+  #fallbar.on { display:block; background:var(--bad); color:#fff; font-size:26px; font-weight:700; text-align:center; padding:16px; }
+  .topbtns { display:flex; gap:10px; margin-top:8px; }
+  a.btn { font-size:18px; border-radius:10px; padding:10px 16px; background:#ece8df; color:var(--ink); text-decoration:none; }
+  .chips { margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { font-size:14px; padding:2px 10px; border-radius:999px; background:#ece8df; color:var(--muted); }
+  .chip.on { background:#dfe8ff; color:#1d3f8f; } .chip.esc { background:#ffe2e2; color:#8f1d1d; } .chip.fix { background:#dcf3df; color:#1e5d26; }
+  .fixed { display:flex; gap:14px; justify-content:space-between; padding:12px 16px; border-radius:12px; margin-bottom:10px; background:#f1faf2; border-left:8px solid var(--ok); }
+  .fixed .ttf { font-size:24px; font-weight:700; color:var(--ok); white-space:nowrap; }
+  .fixed .follow { color:var(--ok); margin-top:2px; }
+  #demo-card { display:none; border:3px solid var(--accent); }
+  #demo-card.on { display:block; }
+  .step { display:flex; gap:14px; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); }
+  .step:last-child { border-bottom:0; }
+  .step .n { flex:0 0 44px; height:44px; border-radius:50%; background:#ece8df; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; }
+  .step.done .n { background:var(--ok); color:#fff; } .step.now .n { background:var(--accent); color:#fff; }
+  .step .txt { flex:1; } .step .sub { font-size:16px; color:var(--muted); }
+  .step.done .sub { color:var(--ok); font-weight:600; }
+</style>
+</head>
+<body>
+<div id="fallbar"></div>
+<header>
+  <h1>Memory Band <span class="muted" id="who"></span></h1>
+  <div><span id="now"></span><span id="demo" class="badge demo" hidden>demo clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
+    <div class="topbtns"><a class="btn" href="/setup">Set up the band</a><button id="demobtn">Demo mode</button></div></div>
+</header>
+<main>
+  <section class="card wide" id="demo-card">
+    <h2>Demo: forgot to lock the door → push → locked → resolved</h2>
+    <div id="demo-steps"></div>
+    <div style="margin-top:10px"><button class="light" id="demo-close">Close demo</button></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Right now</h2>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Open issues</h2>
+    <div id="alerts"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Resolved</h2>
+    <div id="resolved"></div>
+  </section>
+
+  <section class="card">
+    <h2>Ask</h2>
+    <form id="askform"><input type="text" id="q" placeholder="Where are my keys?" autocomplete="off"><button>Ask</button></form>
+    <div id="answer"></div>
+  </section>
+
+  <section class="card">
+    <h2>Coming up</h2>
+    <ul id="reminders"></ul>
+  </section>
+
+  <section class="card">
+    <h2>Where things are</h2>
+    <ul id="places"></ul>
+  </section>
+
+  <section class="card">
+    <h2>People</h2>
+    <ul id="people"></ul>
+  </section>
+
+  <section class="card wide">
+    <h2>Today</h2>
+    <ul id="timeline"></ul>
+  </section>
+
+  <section class="card wide">
+    <h2>Phone notifications</h2>
+    <div id="ntfy" class="muted"></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const PILL = { taken: ["Taken", "ok"], double: ["Taken twice!", "bad"], later: ["Later", ""], due: ["Due now", "warn"], late: ["Not taken yet", "bad"], missed: ["Missed", "bad"] };
+const KIND = { heard: "heard", pill_taken: "pill", door_locked: "door", leaving_home: "leaving", leaving_place: "leaving", item_placed: "item", item_picked_up: "item", stove_on: "stove", stove_off: "stove", person: "person", appointment: "appointment", promise: "promise", fall: "fall", fall_cancelled: "fall", arrived_home: "home", pill_bottle: "pill", door_sound: "sound", double_tap: "band", tap: "band", help: "help", fine: "ok", lock_sound: "door", lock_twist: "door", click: "door", pill_rattle: "pill", cap_twist: "pill", to_mouth: "pill", set_down: "phone", setdown_clack: "phone", impact: "phone" };
+const HIDE = new Set(["set_down", "impact", "setdown_clack", "cap_twist", "to_mouth", "pill_rattle", "click", "lock_twist"]);
+
+function tile(label, value, cls) {
+  const t = el("div", "tile " + (cls || ""));
+  t.append(el("div", "label", label), el("div", "value", value));
+  return t;
+}
+function list(id, items, render, empty) {
+  const ul = $(id); ul.replaceChildren();
+  if (!items.length) { ul.append(el("li", "empty", empty)); return; }
+  items.forEach((x) => ul.append(render(x)));
+}
+
+async function ack(id) { await fetch(`/api/alerts/${id}/ack`, { method: "POST" }); refresh(); }
+
+function render(s) {
+  $("who").textContent = "· " + s.person;
+  $("now").textContent = s.now_text;
+  $("demo").hidden = !s.demo_clock;
+  const b = s.band || {};
+  $("band").textContent = b.connected ? `band ${b.name || ""} connected` : "band not connected";
+  $("engine").textContent = "understanding: " + s.tagger;
+
+  const st = $("status"); st.replaceChildren();
+  s.pills.forEach((p) => {
+    const [txt, cls] = PILL[p.status] || [p.status, ""];
+    st.append(tile(`${p.name} (${p.time})`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
+  });
+  const pr = s.presence || {};
+  st.append(tile("Where", pr.state === "away" ? `Out since ${pr.since}` : "Home" + (pr.since ? ` since ${pr.since}` : ""), pr.state === "away" ? "warn" : "ok"));
+  const how = s.door.how === "twist" ? " (key turn)" : (s.door.how === "tap" ? " (tap)" : "");
+  st.append(tile("Front door", s.door.ok ? `Locked ${s.door.locked_at}${how}` : (s.door.left_at ? `Not locked (left ${s.door.left_at})` : "No lock heard yet"), s.door.ok ? "ok" : (s.door.left_at ? "bad" : "warn")));
+  st.append(tile("Stove", s.stove.on ? `On since ${s.stove.since}` : "Off", s.stove.on ? "warn" : "ok"));
+  const ph = s.phone || {};
+  st.append(tile("Phone", ph.down_at ? `Set down ${ph.down_at}` : "With you (or not tracked)", ph.down_at ? "warn" : "ok"));
+  st.append(tile("Fall", s.fall.active ? `Checking… ${s.fall.seconds_left}s` : "No fall", s.fall.active ? "bad" : "ok"));
+
+  const fb = $("fallbar");
+  fb.className = s.fall.active ? "on" : "";
+  fb.textContent = s.fall.active ? `Fall detected. Double-tap the band if you're OK. Family alerted in ${s.fall.seconds_left}s.` : "";
+
+  const al = $("alerts"); al.replaceChildren();
+  const open = s.alerts.filter((a) => !a.acked && !a.resolved);
+  if (!open.length) al.append(el("div", "empty", "No open issues. All good."));
+  open.forEach((a) => {
+    const box = el("div", "alert " + a.level);
+    const body = el("div");
+    const to = a.audience === "both" ? "wearer + family" : (a.audience === "user" ? "wearer" : "family");
+    const chips = el("div", "chips");
+    chips.append(el("span", "chip on", `raised ${a.time}`), el("span", "chip on", `push sent to ${to}`));
+    if (a.escalated) chips.append(el("span", "chip esc", `escalated to family ${a.escalated_time || ""}`));
+    else if (a.escalate_at) chips.append(el("span", "chip", "family is told if nothing happens"));
+    chips.append(el("span", "chip", "waiting for the fix…"));
+    body.append(el("div", "t", a.title), el("div", "m", a.message), chips);
+    box.append(body);
+    const btn = el("button", "light", "Got it"); btn.onclick = () => ack(a.id); box.append(btn);
+    al.append(box);
+  });
+  const rs = $("resolved"); rs.replaceChildren();
+  const fixed = s.alerts.filter((a) => a.resolved || a.acked);
+  if (!fixed.length) rs.append(el("div", "empty", "Nothing resolved yet today."));
+  fixed.slice(0, 20).forEach((a) => {
+    const box = el("div", "fixed");
+    const body = el("div");
+    const chips = el("div", "chips");
+    chips.append(el("span", "chip", `raised ${a.time}`), el("span", "chip", "push sent"));
+    if (a.escalated) chips.append(el("span", "chip esc", `escalated ${a.escalated_time || ""}`));
+    if (a.resolved) chips.append(el("span", "chip fix", `resolved ${a.resolved_time || ""} · ${a.resolved_how}`));
+    else chips.append(el("span", "chip", "acknowledged (Got it)"));
+    body.append(el("div", "t", "✅ " + a.title));
+    if (a.follow_up) body.append(el("div", "follow", a.follow_up));
+    body.append(chips);
+    box.append(body, el("div", "ttf", a.time_to_fix ? "fixed in " + a.time_to_fix : ""));
+    rs.append(box);
+  });
+  demoRender(s);
+
+  const upcoming = s.reminders.filter((r) => !r.fired);
+  list("reminders", upcoming, (r) => { const li = el("li"); li.append(el("span", "time", r.when), document.createTextNode(r.text)); return li; }, "Nothing planned yet.");
+  list("places", s.places, (p) => { const li = el("li"); li.append(el("strong", null, p.item + ": "), document.createTextNode(p.place), el("span", "muted", "  (" + p.time + ")")); return li; }, "Say \"I put my keys in the drawer\" and it shows up here.");
+  list("people", s.people, (p) => { const li = el("li"); li.append(el("strong", null, p.name), document.createTextNode(" — " + p.relation), el("span", "muted", "  (" + p.time + ")")); return li; }, "Say \"this is my neighbor Tom\" and it shows up here.");
+  list("timeline", s.timeline.filter((e) => !HIDE.has(e.kind) || showRaw), (e) => {
+    const li = el("li");
+    li.append(el("span", "time", e.time));
+    li.append(document.createTextNode(e.kind === "heard" ? `“${e.text}”` : e.text));
+    li.append(el("span", "kind", KIND[e.kind] || e.kind));
+    return li;
+  }, "Nothing yet today.");
+
+  const n = $("ntfy"); n.replaceChildren();
+  n.append(document.createTextNode("Install the free ntfy app and subscribe. Wearer's phone: "), el("code", null, s.ntfy.user_topic),
+           document.createTextNode("  Family: "), el("code", null, s.ntfy.family_topic),
+           document.createTextNode(`  (server ${s.ntfy.server}${s.ntfy.dry_run ? ", dry run: printed only" : ""})`));
+}
+
+// ---- demo mode: reset -> setup -> leave home -> push -> lock -> resolved ----
+let showRaw = false;
+const DEMO_KEY = "memoryband-demo";
+let demo = JSON.parse(localStorage.getItem(DEMO_KEY) || "null");
+function saveDemo() { localStorage.setItem(DEMO_KEY, JSON.stringify(demo)); }
+async function post(path) { const r = await fetch(path, { method: "POST" }); return r.ok ? r.json() : null; }
+$("demobtn").onclick = () => { demo = demo || { step: 1 }; saveDemo(); $("demo-card").classList.add("on"); refresh(); };
+$("demo-close").onclick = () => { demo = null; localStorage.removeItem(DEMO_KEY); $("demo-card").classList.remove("on"); };
+function stepRow(n, title, sub, state, buttons) {
+  const row = el("div", "step " + state);
+  const txt = el("div", "txt");
+  txt.append(el("div", null, title), el("div", "sub", sub));
+  row.append(el("div", "n", state === "done" ? "✓" : String(n)), txt);
+  (buttons || []).forEach((b) => row.append(b));
+  return row;
+}
+function btn(label, fn, light) { const b = el("button", light ? "light" : "", label); b.onclick = fn; return b; }
+function demoRender(s) {
+  if (!demo) { $("demo-card").classList.remove("on"); return; }
+  $("demo-card").classList.add("on");
+  const door = demo.leftAt ? s.alerts.filter((a) => a.rule === "door" && a.ts >= demo.leftAt - 1) : [];
+  const alert = door[door.length - 1];
+  if (demo.step === 3 && alert) { demo.step = 4; demo.alertId = alert.id; saveDemo(); }
+  const mine = s.alerts.find((a) => a.id === demo.alertId);
+  if (demo.step === 4 && mine && mine.resolved) { demo.step = 5; saveDemo(); }
+  const box = $("demo-steps"); box.replaceChildren();
+  const st = (n) => demo.step > n ? "done" : (demo.step === n ? "now" : "");
+  box.append(stepRow(1, "Start fresh", demo.step > 1 ? "Cleared." : "Clears today's events and alerts.", st(1),
+    demo.step === 1 ? [btn("Reset", async () => { await post("/api/reset"); demo.step = 2; saveDemo(); refresh(); })] : []));
+  box.append(stepRow(2, "Set up the band (once)", demo.step > 2 ? "Done." : "Record the door lock sound and key turn. Skip if already done.", st(2),
+    demo.step === 2 ? [btn("Open setup", () => window.open("/setup", "_blank")), btn("Next", () => { demo.step = 3; saveDemo(); refresh(); }, true)] : []));
+  let sub3 = "The phone leaving Home (its geofence automation) tells the server you went out.";
+  if (demo.step === 3 && demo.leftAt) sub3 = `Left at ${new Date(demo.leftReal).toLocaleTimeString([], {hour: "numeric", minute: "2-digit", second: "2-digit"})}. Waiting for the "You didn't lock the door" push (about 20 s)…`;
+  if (demo.step > 3 && alert) sub3 = `Push sent at ${alert.time}: "${alert.title}".`;
+  box.append(stepRow(3, "Leave home without locking", sub3, st(3),
+    demo.step === 3 && !demo.leftAt ? [btn("Leave home", async () => { demo.leftAt = s.now; demo.leftReal = Date.now(); saveDemo(); await post("/api/demo/leave"); refresh(); })] : []));
+  box.append(stepRow(4, "Go back and lock the door", demo.step === 4 ? "Lock the door with the band on (lock sound, or key turn + click). Or double-tap the band." :
+    (demo.step > 4 && mine ? `Locked at ${mine.resolved_time} (${mine.resolved_how}).` : "The band hears / feels you lock it."), st(4)));
+  box.append(stepRow(5, "Resolved", demo.step === 5 && mine ? `Fixed in ${mine.time_to_fix}. Follow-up push: "${mine.follow_up || "sent"}"` : "Shows under Resolved with the time it took.", demo.step === 5 ? "done" : "",
+    demo.step === 5 ? [btn("Run again", async () => { await post("/api/reset"); demo = { step: 3 }; saveDemo(); refresh(); }, true)] : []));
+}
+
+async function refresh() {
+  try { const r = await fetch("/api/state"); if (r.ok) render(await r.json()); } catch (e) { $("now").textContent = "Server not reachable"; }
+}
+$("askform").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const q = $("q").value.trim(); if (!q) return;
+  const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+  $("answer").textContent = (await r.json()).answer;
+};
+refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>

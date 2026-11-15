@@ -1,0 +1,52 @@
+# A scripted day for the Memory Band demo. replay.py sends each line to the server.
+# Format:  HH:MM | @action  (passive signals: exactly what band_listener.py / the phone send)
+#          HH:MM | words    (optional speech path, as if Deepgram heard them)
+# Actions: @double-tap  band double-tap = "yes, I did it / I'm fine"
+#          @fall        band felt a fall
+#          @leave       phone's Shortcuts automation "When I leave Home"   (POST /api/leaving)
+#          @arrive      phone's "When I arrive Home"                       (POST /api/arrived)
+#          @walk-away   band's signal to the home Mac faded (fallback for leaving)
+#          @lock-sound  band mic heard YOUR calibrated lock sound
+#          @twist       band felt a key-turn wrist twist
+#          @click       band mic heard a click-ish sound (counts together with a twist)
+#          @tick        only move the clock so timed rules can fire
+# Times move the server's demo clock; the real clock is untouched.
+
+07:30 | Good morning! This is my neighbor Tom, he lives next door.
+07:45 | I put my keys in the drawer by the door.
+08:00 | I'm turning on the stove to make some eggs.
+08:21 | @tick
+08:23 | @double-tap
+08:50 | @lock-sound
+08:52 | @leave
+09:00 | @tick
+09:20 | @arrive
+09:31 | @tick
+10:01 | @tick
+10:05 | @double-tap
+10:40 | Did I take my pill?
+10:41 | I took my pill.
+10:45 | What day is it today?
+10:55 | What day is it?
+11:05 | Hey, what day is it today?
+11:10 | I have a dentist appointment on Tuesday at 3.
+11:12 | My eye doctor appointment is today at 1:30.
+11:15 | I need to call my son at noon.
+11:30 | Where did I put my keys?
+11:40 | @leave
+11:42 | @tick
+11:44 | @twist
+11:44 | @click
+12:00 | @tick
+12:15 | I'll put my phone on the table.
+12:30 | @tick
+12:58 | Check, please.
+13:00 | Thanks for lunch, bye, let's go.
+13:10 | @arrive
+13:20 | @fall
+13:20 | @double-tap
+14:10 | @fall
+14:11 | @tick
+16:00 | @walk-away
+16:02 | @tick
+18:31 | @tick

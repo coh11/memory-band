@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory Band setup</title>
+<style>
+  :root { --bg:#f6f4ef; --card:#fff; --ink:#1d1d1f; --muted:#5f6368; --ok:#1e7d32; --bad:#c62828; --line:#e3dfd6; --accent:#2457c5; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:24px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:640px; margin:0 auto; padding:18px 18px 40px; }
+  .top { display:flex; justify-content:space-between; align-items:center; font-size:18px; color:var(--muted); }
+  .top a { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:26px 22px; margin-top:14px; }
+  h1 { font-size:36px; line-height:1.15; margin:0 0 10px; }
+  .icon { font-size:64px; line-height:1; margin-bottom:8px; }
+  .how { font-size:24px; }
+  .dots { display:flex; gap:22px; justify-content:center; margin:28px 0 10px; }
+  .dot { width:58px; height:58px; border-radius:50%; border:4px solid #cfc9bc; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; color:#b5ae9f; }
+  .dot.on { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .dot.next { border-color:var(--accent); color:var(--accent); animation:pulse 1.2s infinite; }
+  @keyframes pulse { 50% { transform:scale(1.12); } }
+  .count { text-align:center; font-size:22px; color:var(--muted); min-height:1.4em; }
+  .msg { text-align:center; font-size:26px; font-weight:600; min-height:2.8em; margin:14px 0; }
+  .msg.ok { color:var(--ok); } .msg.bad { color:var(--bad); }
+  button { display:block; width:100%; font:inherit; font-size:26px; font-weight:650; border:0; border-radius:16px; padding:18px; margin-top:12px; background:var(--accent); color:#fff; cursor:pointer; }
+  button.light { background:#ece8df; color:var(--ink); font-weight:500; }
+  button.ok { background:var(--ok); }
+  button[hidden] { display:none; }
+  .steps { display:flex; gap:6px; margin-top:8px; }
+  .steps span { flex:1; height:8px; border-radius:4px; background:#ddd7cb; }
+  .steps span.on { background:var(--accent); } .steps span.done { background:var(--ok); }
+  .warn { background:#fff1f1; border:2px solid #f1b5b5; color:var(--bad); border-radius:14px; padding:12px 14px; font-size:19px; margin-top:12px; }
+  .warn code { font-size:16px; background:#fff; padding:2px 5px; border-radius:5px; }
+  .small { font-size:18px; color:var(--muted); }
+  .big-ok { font-size:90px; text-align:center; color:var(--ok); line-height:1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span id="where">Memory Band setup</span><a href="/">Dashboard</a></div>
+  <div class="steps" id="bar"></div>
+  <div id="listener" class="warn" hidden></div>
+  <div class="card" id="screen"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const STEPS = [
+  { key: "welcome" },
+  { key: "lock", icon: "🔒", title: "Door lock sound", how: "Stand at your front door with the band on the wrist you lock with. Press Start, then lock the door. Do it 3 times.", tip: "Unlock it again between tries. A quiet moment helps." },
+  { key: "twist", icon: "🗝️", title: "Key turn", how: "Press Start, then turn the key in the lock, just like locking it. Do it 3 times.", tip: "Turn back between tries and pause a second." },
+  { key: "pill", icon: "💊", title: "Pill bottle", how: "Press Start, then pick up your pill bottle and shake out a pill. Do it 3 times.", tip: "Put the pill back each time. Use your usual bottle." },
+  { key: "setdown", icon: "📱", title: "Phone set-down", how: "Press Start, then put your phone down on a table, like at a café. Do it 3 times.", tip: "Pick it up again between tries." },
+  { key: "done" },
+];
+let step = Number(localStorage.getItem("mb-setup-step") || 0);
+let status = { calibration: {}, listener_alive: false, calibrated: {} };
+let mine = null;            // id of the calibration this page started
+let test = null;            // live test: { since, result }
+
+async function api(path, body) {
+  const r = await fetch("/api" + path, body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return r.ok ? r.json() : null;
+}
+function go(n) { step = Math.max(0, Math.min(STEPS.length - 1, n)); localStorage.setItem("mb-setup-step", step); mine = null; test = null; draw(); }
+function button(label, fn, cls) { const b = el("button", cls || "", label); b.onclick = fn; return b; }
+
+function drawBar() {
+  const bar = $("bar"); bar.replaceChildren();
+  STEPS.forEach((s, i) => bar.append(el("span", i < step ? "done" : (i === step ? "on" : ""))));
+  const lw = $("listener");
+  lw.hidden = status.listener_alive;
+  if (!status.listener_alive) {
+    lw.replaceChildren(document.createTextNode("The band listener isn't running, so the band can't record. On the Mac, in the repo folder, run: "),
+                       el("code", null, ".venv/bin/python charles/band_listener.py"), document.createTextNode(" (double-tap the band first)."));
+  }
+}
+
+function drawWelcome(card) {
+  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home"));
+  card.append(el("div", "how", "4 short steps, about 3 minutes. Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
+  const b = status.band || {};
+  card.append(el("div", "msg " + (b.connected ? "ok" : "bad"), b.connected ? `Band ${b.name || ""} connected ✓` : "Band not connected yet"));
+  card.append(button("Start", () => go(1)));
+}
+
+function drawCalibration(card, s) {
+  const cal = status.calibration || {};
+  const live = mine && cal.id === mine ? cal : null;
+  const n = live ? (live.samples || 0) : 0;
+  const state = live ? live.state : (status.calibrated[s.key] ? "saved" : "idle");
+  card.append(el("div", "icon", s.icon), el("h1", null, s.title), el("div", "how", s.how));
+  const dots = el("div", "dots");
+  for (let i = 0; i < 3; i++) {
+    const done = state === "done" || state === "saved" || i < n;
+    const next = !done && ["recording", "sample", "waiting"].includes(state) && i === n;
+    dots.append(el("div", "dot" + (done ? " on" : (next ? " next" : "")), done ? "✓" : String(i + 1)));
+  }
+  card.append(dots);
+  card.append(el("div", "count", ["recording", "sample"].includes(state) ? `${n} of 3` : ""));
+  let msg = "", cls = "";
+  if (state === "idle") msg = "Press Start when you're ready.";
+  if (state === "saved") { msg = "Already set up ✓  (Redo to record again)"; cls = "ok"; }
+  if (state === "waiting") msg = status.listener_alive ? "Getting the band ready…" : "Waiting for the band listener…";
+  if (state === "recording" || state === "sample") msg = n === 0 ? "Listening… go ahead, do it now." : `Got it! Now number ${n + 1}.`;
+  if (state === "done") { msg = "All 3 recorded. Saved ✓"; cls = "ok"; }
+  if (state === "default") { msg = "Using the default ✓"; cls = "ok"; }
+  if (state === "failed" || state === "cancelled") { msg = live.message || "That didn't work. Try Redo."; cls = "bad"; }
+  card.append(el("div", "msg " + cls, msg));
+  const busy = ["waiting", "recording", "sample"].includes(state);
+  const start = async () => { const r = await api("/calibrate/start", { action: s.key }); if (r) mine = r.id; poll(); };
+  if (state === "idle") card.append(button("Start", start));
+  if (state === "done" || state === "saved" || state === "default") card.append(button("Next", () => go(step + 1), "ok"));
+  if (!busy && state !== "idle") card.append(button("Redo", start, "light"));
+  if (busy) card.append(button("Stop", async () => { await api("/calibrate/cancel", {}); poll(); }, "light"));
+  if (state !== "done" && state !== "default") card.append(button("Skip / use default", async () => {
+    const r = await api("/calibrate/default", { action: s.key }); if (r) mine = r.id; setTimeout(() => go(step + 1), 900); poll(); }, "light"));
+  if (step > 1 && !busy) card.append(button("Back", () => go(step - 1), "light"));
+  card.append(el("div", "small", s.tip));
+}
+
+function drawDone(card) {
+  card.append(el("div", "big-ok", "✓"), el("h1", null, "All set"));
+  const names = { lock: "Door lock sound", twist: "Key turn", pill: "Pill bottle", setdown: "Phone set-down" };
+  const ul = el("div", "how");
+  Object.entries(names).forEach(([k, v]) => ul.append(el("div", null, (status.calibrated[k] ? "✅ " : "▫️ ") + v + (status.calibrated[k] ? "" : " (default)"))));
+  card.append(ul);
+  card.append(el("h1", null, "Live test"));
+  if (!test) {
+    card.append(el("div", "how", "Lock the door once, with the band on."));
+    card.append(button("Test it now", async () => { const st = await api("/state"); test = { since: st ? st.now - 1 : Date.now() / 1000, result: null }; draw(); }));
+  } else {
+    let msg = "Listening… lock the door now.", cls = "";
+    if (test.result === "locked") { msg = "Door lock recognized ✓"; cls = "ok"; }
+    if (test.result === "click") msg = "Heard a click. Turn the key as well (or Redo the lock sound).";
+    if (test.result === "twist") msg = "Felt a key turn. Listening for the click…";
+    card.append(el("div", "msg " + cls, msg));
+    card.append(button(test.result === "locked" ? "Test again" : "Restart test", async () => { const st = await api("/state"); test = { since: st.now - 1, result: null }; draw(); }, "light"));
+  }
+  card.append(button("Go to the dashboard", () => { location.href = "/"; }));
+  card.append(button("Start setup again", () => go(1), "light"));
+}
+
+function draw() {
+  drawBar();
+  const card = $("screen"); card.replaceChildren();
+  const s = STEPS[step];
+  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of 4` : "Memory Band setup";
+  if (s.key === "welcome") drawWelcome(card);
+  else if (s.key === "done") drawDone(card);
+  else drawCalibration(card, s);
+}
+
+async function poll() {
+  const st = await api("/calibrate/status");
+  if (st) status = st;
+  if (test && !test.result || (test && test.result !== "locked")) {
+    const s = await api("/state");
+    if (s) {
+      const evs = s.timeline.filter((e) => e.ts >= test.since);
+      if (evs.some((e) => e.kind === "door_locked" || e.kind === "lock_sound")) test.result = "locked";
+      else if (evs.some((e) => e.kind === "click")) test.result = "click";
+      else if (evs.some((e) => e.kind === "lock_twist")) test.result = "twist";
+    }
+  }
+  draw();
+}
+draw(); poll(); setInterval(poll, 800);
+</script>
+</body>
+</html>

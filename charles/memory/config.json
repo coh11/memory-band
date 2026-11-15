@@ -1,0 +1,186 @@
+{
+  "person_name": "Mom",
+  "family_name": "family",
+  "rules_interval_seconds": 5,
+  "pills": {
+    "doses": [
+      {
+        "name": "morning pill",
+        "time": "09:00"
+      },
+      {
+        "name": "evening pill",
+        "time": "21:00"
+      }
+    ],
+    "window_before_minutes": 60,
+    "window_after_minutes": 180,
+    "remind_after_minutes": 30,
+    "escalate_after_minutes": 60,
+    "passive": {
+      "window_seconds": 30,
+      "need_motion_cues": 1,
+      "rattle_alone_counts": false,
+      "same_dose_seconds": 60
+    }
+  },
+  "door": {
+    "lookback_minutes": 15,
+    "grace_minutes": 0.25,
+    "escalate_after_minutes": 10,
+    "twist_click_window_seconds": 5,
+    "twist_alone_counts": true
+  },
+  "items": {
+    "tracked": [
+      "phone",
+      "wallet",
+      "keys",
+      "purse",
+      "glasses",
+      "bag",
+      "umbrella",
+      "cane",
+      "hearing aid"
+    ],
+    "lookback_minutes": 120,
+    "passive": {
+      "item": "phone",
+      "sound_motion_window_seconds": 4,
+      "sound_kinds": [
+        "setdown_clack",
+        "impact"
+      ],
+      "min_seconds_before_pickup": 1,
+      "lookback_minutes": 120
+    }
+  },
+  "stove": {
+    "remind_after_minutes": 20,
+    "escalate_after_minutes": 10,
+    "check_times": [
+      "18:30"
+    ]
+  },
+  "repeated_questions": {
+    "count": 3,
+    "window_minutes": 30
+  },
+  "reminders": {
+    "appointment_lead_minutes": 60,
+    "promise_default_hour": 10,
+    "escalate_after_minutes": 0
+  },
+  "fall": {
+    "countdown_seconds": 30
+  },
+  "passive": {
+    "presence": {
+      "far_dbm": -80,
+      "near_dbm": -65,
+      "grace_seconds": 20,
+      "smooth_readings": 5
+    },
+    "twist": {
+      "start_dps": 60,
+      "stop_dps": 30,
+      "stop_seconds": 0.15,
+      "min_angle": 70,
+      "max_angle": 200,
+      "max_seconds": 1.2,
+      "dominance": 0.75,
+      "cooldown_seconds": 3
+    },
+    "shake": {
+      "enabled": false,
+      "range_g": 1.2,
+      "count": 3,
+      "window_seconds": 2.0,
+      "cooldown_seconds": 10
+    },
+    "door_sound": {
+      "enabled": false,
+      "quiet_db": 40,
+      "loud_db": 15,
+      "cooldown_seconds": 10
+    },
+    "motion_rate": 50,
+    "sounds": {
+      "onset_ratio": 6.0,
+      "min_rms": 0.01,
+      "refractory_seconds": 1.0,
+      "lock": {
+        "match_score": 0.8,
+        "click_score": 0.6,
+        "hf_ratio_for_click": 0.35
+      },
+      "pill": {
+        "match_score": 0.8,
+        "min_clicks": 3,
+        "heuristic_clicks": 4,
+        "heuristic_hf_ratio": 0.3,
+        "uncalibrated_counts": true
+      },
+      "setdown": {
+        "match_score": 0.75,
+        "decay_ratio": 4.0,
+        "max_clicks": 2,
+        "min_hf_ratio": 0.15,
+        "uncalibrated_counts": true
+      }
+    },
+    "cap_twist": {
+      "start_dps": 60,
+      "stop_dps": 30,
+      "stop_seconds": 0.15,
+      "min_angle": 40,
+      "max_angle": 400,
+      "max_seconds": 2.5,
+      "dominance": 0.6,
+      "cooldown_seconds": 2
+    },
+    "motion": {
+      "still_dps": 25,
+      "still_g": 0.06,
+      "still_seconds": 0.25,
+      "move_dps": 35,
+      "move_g": 0.1,
+      "min_seconds": 0.2,
+      "max_seconds": 4.0,
+      "min_dz": 0.05,
+      "max_dz": 1.0,
+      "max_pose_error_deg": 25
+    },
+    "gestures": {
+      "setdown_min_drop_m": 0.06,
+      "setdown_max_seconds": 2.5,
+      "pickup_min_rise_m": 0.06,
+      "pickup_max_rise_m": 0.5,
+      "pickup_pose_tol_deg": 30,
+      "pickup_walk_veto_seconds": 4,
+      "pickup_lookback_seconds": 7200,
+      "to_mouth_min_rise_m": 0.15,
+      "to_mouth_min_tilt_deg": 30
+    },
+    "walk": {
+      "min_steps": 8,
+      "window_seconds": 12,
+      "state_seconds": 4,
+      "rest_seconds": 3,
+      "step_g": 0.15,
+      "step_min_seconds": 0.3,
+      "step_max_seconds": 1.2,
+      "activity_interval_seconds": 1
+    },
+    "calibration": {
+      "samples": 3,
+      "sample_gap_seconds": 1.5,
+      "timeout_seconds": 90,
+      "min_twist_angle": 50,
+      "poll_seconds": 1.0
+    }
+  },
+  "resolution": {
+    "follow_up_push": true
+  }
+}
