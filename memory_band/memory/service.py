@@ -1,3 +1,4 @@
+import time
 """What happens when the band reports something, and the answers to questions."""
 import logging
 import re
@@ -15,7 +16,7 @@ EVENT_TEXT = {
 
 
 def handle_presence(state_name, reason="", rssi=None, now=None, source="band"):
-    """From the band's Bluetooth signal to the home Mac (band_bridge.py Presence)."""
+    """From the band's Bluetooth signal to the home Mac (band_listener.py Presence)."""
     now = now if now is not None else clock.now()
     with rules.LOCK:
         was = (store.kv_get("presence") or {}).get("state", "home")
@@ -453,7 +454,7 @@ def state():
         "person": rules.WHO,
         "tagger": tagger.engine(),
         "ntfy": {"server": TOPICS["server"], "user_topic": TOPICS["user"], "family_topic": TOPICS["family"], "dry_run": DRY_RUN},
-        "band": store.kv_get("band", {}),
+        "band": (lambda b, l: dict(b, connected=bool(b.get("connected") and l.get("seen") and time.time() - l["seen"] < 10)))(store.kv_get("band", {}) or {}, store.kv_get("listener") or {}),
         "pills": [{"name": p["name"], "time": p["time"], "status": p["status"],
                    "taken_at": [clock.hhmm(t) for t in p["taken_at"]]} for p in rules.pills_today(now)],
         "presence": {"state": presence.get("state", "home"), "since": clock.hhmm(presence["since"]) if presence.get("since") else None,

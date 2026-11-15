@@ -203,7 +203,7 @@ function render(s) {
   const st = $("status"); st.replaceChildren();
   s.pills.forEach((p) => {
     const [txt, cls] = PILL[p.status] || [p.status, ""];
-    st.append(tile(`${p.name} (${p.time})`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
+    st.append(tile(`${p.name.charAt(0).toUpperCase() + p.name.slice(1)} · ${p.time}`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
   });
   const pr = s.presence || {};
   st.append(tile("Where", pr.state === "away" ? `Out since ${pr.since}` : "Home" + (pr.since ? ` since ${pr.since}` : ""), pr.state === "away" ? "warn" : "ok"));
@@ -211,7 +211,7 @@ function render(s) {
   st.append(tile("Front door", s.door.ok ? `Locked ✓ ${s.door.locked_at}${how}` : (s.door.left_at ? `Not locked (left ${s.door.left_at})` : "Not locked yet today"), s.door.ok ? "ok" : (s.door.left_at ? "bad" : "warn")));
   st.append(tile("Stove", s.stove.on ? `On since ${s.stove.since}` : "Off", s.stove.on ? "warn" : "ok"));
   const ph = s.phone || {};
-  st.append(tile("Phone", ph.down_at ? `Set down ${ph.down_at}` : "With you (or not tracked)", ph.down_at ? "warn" : "ok"));
+  st.append(tile("Phone", ph.down_at ? `Set down ${ph.down_at}` : "Not left anywhere", ph.down_at ? "warn" : "ok"));
   const wr = s.wear || {};
   st.append(tile("Band on wrist", wr.state === "not_worn" ? `Not worn since ${wr.since}` : "Worn" + (wr.since ? ` since ${wr.since}` : ""), wr.state === "not_worn" ? "warn" : "ok"));
   const wt = s.water || {};

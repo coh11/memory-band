@@ -49,6 +49,45 @@
   button:focus-visible, a:focus-visible { outline:3px solid #111; outline-offset:2px; }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
   .big-ok { font-size:90px; text-align:center; color:var(--ok); line-height:1; }
+
+  /* polish */
+  body { background:#f4f1ea; }
+  .wrap { max-width:620px; padding:28px 20px 56px; }
+  .top { font-size:19px; font-weight:600; color:#4b4b4b; margin-bottom:10px; }
+  .top a { color:#1d6b34; font-weight:600; }
+  .steps { gap:8px; margin:0 0 6px; }
+  .steps span { height:8px; border-radius:4px; background:#dcd6c8; }
+  .steps span.on { background:#1d6b34; } .steps span.done { background:#7fae8b; }
+  .card { border-radius:14px; padding:36px 32px 30px; margin-top:18px; border:1px solid #e2ddd1; }
+  .badge { width:96px; height:96px; border-radius:50%; background:#eef4ee; display:flex; align-items:center; justify-content:center; font-size:50px; margin:0 0 22px; }
+  .kicker { font-size:18px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#1d6b34; margin-bottom:6px; }
+  h1 { font-size:38px; letter-spacing:-.01em; margin:0 0 14px; }
+  .how { font-size:25px; color:#222; }
+  .tip { background:#f7f4ec; border-left:4px solid #c9b98f; border-radius:6px; padding:14px 16px; font-size:20px; color:#3d3d3d; margin-top:24px; }
+  .tip b { color:#111; }
+  .dots { gap:18px; margin:32px 0 6px; }
+  .dot { width:64px; height:64px; border:3px solid #cfc9bc; background:#fff; font-size:26px; color:#9a9384; }
+  .dot.on { background:#1d6b34; border-color:#1d6b34; color:#fff; }
+  .dot.next { border-color:#1d6b34; color:#1d6b34; box-shadow:0 0 0 6px #e3efe5; }
+  .msg { font-size:25px; min-height:2.4em; margin:12px 0 8px; display:flex; align-items:center; justify-content:center; }
+  button { background:#1d6b34; min-height:68px; border-radius:10px; font-size:27px; margin-top:14px; }
+  button:hover { background:#175a2b; }
+  button.light { background:#fff; color:#1d1d1f; border:1.5px solid #b9b2a2; font-size:22px; min-height:58px; font-weight:600; }
+  button.light:hover { background:#f6f3ec; }
+  .row { display:flex; gap:12px; } .row button { flex:1; }
+  .warn { background:#fff8e6; border:1px solid #e7cf8a; color:#5c4400; border-radius:10px; padding:16px 18px; font-size:21px; margin-top:16px; }
+  .warn .techy { display:block; margin-top:8px; font-size:15px; color:#7a6a3a; }
+  .list { margin:22px 0 4px; border-top:1px solid #ebe6db; }
+  .list div { display:flex; align-items:center; gap:14px; padding:13px 2px; border-bottom:1px solid #ebe6db; font-size:23px; }
+  .list .ic { width:40px; text-align:center; font-size:28px; }
+  .list .opt { margin-left:auto; font-size:17px; color:#6b6b6b; }
+  .list .yes { margin-left:auto; color:#1d6b34; font-weight:700; font-size:20px; }
+  .pill { display:inline-block; margin-top:22px; padding:8px 16px; border-radius:999px; font-size:19px; font-weight:600; }
+  .pill.ok { background:#e6f1e8; color:#1d6b34; } .pill.bad { background:#fbeaea; color:#a12a2a; }
+  .big-ok { width:110px; height:110px; border-radius:50%; background:#1d6b34; color:#fff; font-size:64px; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+  .center { text-align:center; }
+  h2 { font-size:28px; margin:34px 0 8px; }
+  @media (max-width:520px) { .card { padding:26px 20px; } h1 { font-size:32px; } .how { font-size:23px; } .row { flex-direction:column; gap:0; } }
 </style>
 </head>
 <body>
@@ -71,7 +110,8 @@ const STEPS = [
   { key: "paper", icon: "🧻", title: "Toilet paper (optional)", how: "Works without this. Press Start, then pull some toilet paper off the roll and tear it. Do it 3 times.", tip: "Used for the \"forgot to flush\" reminder. Skip to use the built-in default." },
   { key: "done" },
 ];
-let step = Number(localStorage.getItem("mb-setup-step") || 0);
+const qs = new URLSearchParams(location.search).get("step");
+let step = qs !== null ? Number(qs) : Number(localStorage.getItem("mb-setup-step") || 0);
 let status = { calibration: {}, listener_alive: false, calibrated: {} };
 let mine = null;            // id of the calibration this page started
 let test = null;            // live test: { since, result }
@@ -89,17 +129,22 @@ function drawBar() {
   const lw = $("listener");
   lw.hidden = status.listener_alive;
   if (!status.listener_alive) {
-    lw.replaceChildren(document.createTextNode("The band listener isn't running, so the band can't record. On the Mac, in the repo folder, run: "),
-                       el("code", null, ".venv/bin/python memory_band/band_bridge.py"), document.createTextNode(" (double-tap the band first)."));
+    const t = el("span", "techy"); t.append(document.createTextNode("For the helper: on the home computer, run "), el("code", null, ".venv/bin/python memory_band/band_bridge.py"));
+    lw.replaceChildren(el("b", null, "The band isn't connected yet. "), document.createTextNode("Tap the band twice and keep it close to the computer."), t);
   }
 }
 
 function drawWelcome(card) {
-  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home"));
-  card.append(el("div", "how", "A few short steps, about 3 minutes (the toilet ones are optional). Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
+  card.append(el("div", "badge", "⌚"), el("h1", null, "Let's teach the band your home"));
+  card.append(el("div", "how", "You'll do a few everyday things, three times each, so the band learns how they look and sound in your home. It takes about 3 minutes."));
+  const list = el("div", "list");
+  STEPS.slice(1, -1).forEach((x) => { const r = el("div"); r.append(el("span", "ic", x.icon), el("span", null, x.title.replace(" (optional)", "")));
+    if (status.calibrated[x.key]) r.append(el("span", "yes", "Done ✓")); else if (x.title.includes("optional")) r.append(el("span", "opt", "Optional")); list.append(r); });
+  card.append(list);
   const b = status.band || {};
-  card.append(el("div", "msg " + (b.connected ? "ok" : "bad"), b.connected ? `Band ${b.name || ""} connected ✓` : "Band not connected yet"));
-  card.append(button("Start", () => go(1)));
+  card.append(el("div", "pill " + (b.connected ? "ok" : "bad"), b.connected ? "● Band connected" : "● Band not connected yet"));
+  card.append(button("Let's start", () => go(1)));
+  card.append(el("div", "tip", "Not sure about a step? You can skip it. The band already knows what most of these sound like."));
 }
 
 function drawCalibration(card, s) {
@@ -107,7 +152,7 @@ function drawCalibration(card, s) {
   const live = mine && cal.id === mine ? cal : null;
   const n = live ? (live.samples || 0) : 0;
   const state = live ? live.state : (status.calibrated[s.key] ? "saved" : "idle");
-  card.append(el("div", "icon", s.icon), el("h1", null, s.title), el("div", "how", s.how));
+  card.append(el("div", "badge", s.icon), el("div", "kicker", `Step ${step} of ${STEPS.length - 2}` + (s.title.includes("optional") ? " · Optional" : "")), el("h1", null, s.title.replace(" (optional)", "")), el("div", "how", s.how));
   const dots = el("div", "dots");
   for (let i = 0; i < 3; i++) {
     const done = state === "done" || state === "saved" || i < n;
@@ -131,19 +176,22 @@ function drawCalibration(card, s) {
   if (state === "done" || state === "saved" || state === "default") card.append(button("Next", () => go(step + 1), "ok"));
   if (!busy && state !== "idle") card.append(button("Try again", start, "light"));
   if (busy) card.append(button("Stop", async () => { await api("/calibrate/cancel", {}); poll(); }, "light"));
-  if (state !== "done" && state !== "default") card.append(button("Skip — use the default", async () => {
+  const row = el("div", "row");
+  if (step > 1 && !busy) row.append(button("Back", () => go(step - 1), "light"));
+  if (state !== "done" && state !== "default") row.append(button("Skip, use the default", async () => {
     const r = await api("/calibrate/default", { action: s.key }); if (r) mine = r.id; setTimeout(() => go(step + 1), 900); poll(); }, "light"));
-  if (step > 1 && !busy) card.append(button("Back", () => go(step - 1), "light"));
-  card.append(el("div", "small", s.tip));
+  if (row.children.length) card.append(row);
+  const tip = el("div", "tip"); tip.append(el("b", null, "Tip: "), document.createTextNode(s.tip)); card.append(tip);
 }
 
 function drawDone(card) {
-  card.append(el("div", "big-ok", "✓"), el("h1", null, "All set"));
-  const names = { lock: "Door lock sound", twist: "Key turn", pill: "Pill bottle", setdown: "Phone set-down", flush: "Toilet flush", paper: "Toilet paper" };
-  const ul = el("div", "how");
-  Object.entries(names).forEach(([k, v]) => ul.append(el("div", null, (status.calibrated[k] ? "✅ " : "▫️ ") + v + (status.calibrated[k] ? "" : " (default)"))));
+  card.append(el("div", "big-ok", "✓"), el("h1", "center", "You're all set"));
+  card.append(el("div", "how center", "The band now knows your home. You don't need to do anything else."));
+  const ul = el("div", "list");
+  STEPS.slice(1, -1).forEach((x) => { const r = el("div"); r.append(el("span", "ic", x.icon), el("span", null, x.title.replace(" (optional)", "")),
+    el("span", status.calibrated[x.key] ? "yes" : "opt", status.calibrated[x.key] ? "Learned ✓" : "Using default")); ul.append(r); });
   card.append(ul);
-  card.append(el("h1", null, "Live test"));
+  card.append(el("h2", null, "Try it once"));
   if (!test) {
     card.append(el("div", "how", "Lock the door once, with the band on."));
     card.append(button("Test it now", async () => { const st = await api("/state"); test = { since: st ? st.now - 1 : Date.now() / 1000, result: null }; draw(); }));
@@ -156,14 +204,14 @@ function drawDone(card) {
     card.append(button(test.result === "locked" ? "Test again" : "Restart test", async () => { const st = await api("/state"); test = { since: st.now - 1, result: null }; draw(); }, "light"));
   }
   card.append(button("Go to my home screen", () => { location.href = "/"; }));
-  card.append(button("Start setup again", () => go(1), "light"));
+  card.append(button("Go through setup again", () => go(1), "light"));
 }
 
 function draw() {
   drawBar();
   const card = $("screen"); card.replaceChildren();
   const s = STEPS[step];
-  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of ${STEPS.length - 2}` + (STEPS[step].title && STEPS[step].title.includes("optional") ? " · Optional" : "") : "Memory Band setup";
+  $("where").textContent = "Memory Band setup";
   if (s.key === "welcome") drawWelcome(card);
   else if (s.key === "done") drawDone(card);
   else drawCalibration(card, s);
