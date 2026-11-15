@@ -1,6 +1,6 @@
 # Memory Band
 
-**A proactive memory assistant for older adults, built on the Vexo Open band.** Built at VexoHacks 2026 (YC, San Francisco).
+**A proactive memory assistant for older adults, built on the Vexo Open band.**
 
 > 🎥 **Demo video:** _link coming soon_
 
