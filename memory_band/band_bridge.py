@@ -166,7 +166,7 @@ def parse_number(a):
     if not raw:
         sys.exit("Which band? Add your band number (written on its bag), or set BAND_NUMBER in .env. "
                  "The pretend band (--sim) uses the same number.")
-    digits = raw.upper().replace("VEXO-HACK-", "")
+    digits = "".join(ch for ch in raw if ch.isdigit()) or raw   # "40", "#40" or the full band name
     if not (digits.isdigit() and 1 <= int(digits) <= 999):
         sys.exit('"%s" is not a band number. Type the number on your band\'s bag, e.g. 17.' % raw)
     return int(digits)
@@ -180,7 +180,7 @@ def connect(number, a):
         band.transport.set_activity("still")              # not the made-up slow walk
         band.transport.play_motion(dict(passive.REST_POSE), seconds=0.1)   # lying still, not the made-up swing
         return band
-    print("Looking for Vexo-HACK-%02d ... (double-tap the band if it isn't found)" % number)
+    print("Looking for band %02d ... (double-tap the band if it isn't found)" % number)
     return Band.connect(number, transport="serial" if a.usb else "ble", auto_reconnect=True)
 
 
@@ -778,7 +778,7 @@ def main():
                 # the band gave up reconnecting (away for more than 2 minutes): keep looking
                 pipe.presence.link_lost()
                 pipe.presence.tick()
-                post.send("/band", {"connected": False, "name": "Vexo-HACK-%02d" % number, "note": "away"})
+                post.send("/band", {"connected": False, "name": "band %02d" % number, "note": "away"})
                 print("Band out of reach. Looking for it every 15 s (double-tap it when you're back).")
                 while True:
                     time.sleep(15)
