@@ -63,7 +63,7 @@ The listener on the Mac turns the band's mic and motion sensor into actions. Spe
 
 | Action | Sound (mic) | Motion (IMU) | Counts when |
 |---|---|---|---|
-| Door locked | your lock's clack (calibrated) → `lock_sound`; uncalibrated or weak match → `click` | key-turn twist (calibrated or default 70–200°) | `lock_sound` alone, or twist + click within 5 s. A twist alone never counts (ordinary arm moves look like twists) |
+| Door locked | your lock's clack (calibrated) → `lock_sound`; uncalibrated or weak match → `click` | key-turn twist (calibrated or default 70–200°) | `lock_sound` alone, or twist + click within 5 s. A key-turn twist alone also counts when `door.twist_alone_counts` is true (the default for the demo) |
 | Pill taken | pill bottle rattle → `pill_rattle` (many little clicks in 1 s) | cap twist (40°+) or hand to mouth (wrist up 15 cm+ with 30°+ forearm tilt) | rattle + at least one motion cue within 30 s. Repeats within 60 s are the same dose (closing the cap) |
 | Phone set down | clack → `setdown_clack` (calibrated) or `impact` (short sound that dies fast) | hand goes down 6 cm+ and rests | sound + motion within 4 s → `item_placed` (phone) |
 | Phone picked up | — | hand lifts from the pose it set the phone down in, and no walking starts in the next 4 s (that would be standing up) | → `item_picked_up`, resolves the alert |
