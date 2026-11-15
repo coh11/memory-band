@@ -103,7 +103,7 @@
 <header>
   <h1>Memory Band <span class="muted" id="who"></span></h1>
   <div><span id="now"></span><span id="demo" class="badge demo" hidden>demo clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
-    <div class="topbtns"><a class="btn" href="/setup">Teach the band</a><button id="demobtn">Demo mode</button></div></div>
+    <div class="topbtns"><a class="btn" href="/setup">Teach the band</a></div></div>
 </header>
 <main>
   <section class="card wide" id="demo-card">
@@ -158,6 +158,8 @@
     <div class="bathbtns" style="margin-top:8px;font-size:15px">Bathroom demo (no toilet needed):
       <button class="light" onclick="fetch('/api/demo/paper',{method:'POST'})">🧻 Toilet paper sound</button>
       <button class="light" onclick="fetch('/api/demo/flush',{method:'POST'})">🚽 Flush</button></div>
+    <div class="bathbtns" style="margin-top:6px;font-size:15px">Door demo:
+      <button class="light" onclick="fetch('/api/demo/leave',{method:'POST'})">🚪 Leave home (without locking)</button></div>
     <div class="bathbtns" style="margin-top:6px;font-size:15px">Water demo:
       <button class="light" onclick="fetch('/api/demo/hydration-due',{method:'POST'})">⏰ Water reminder now</button>
       <button class="light" onclick="fetch('/api/demo/drink',{method:'POST'})">💧 Drink</button></div>
@@ -277,10 +279,9 @@ function render(s) {
 // ---- demo mode: reset -> setup -> leave home -> push -> lock -> resolved ----
 let showRaw = false;
 const DEMO_KEY = "memoryband-demo";
-let demo = JSON.parse(localStorage.getItem(DEMO_KEY) || "null");
+let demo = null; localStorage.removeItem(DEMO_KEY);
 function saveDemo() { localStorage.setItem(DEMO_KEY, JSON.stringify(demo)); }
 async function post(path) { const r = await fetch(path, { method: "POST" }); return r.ok ? r.json() : null; }
-$("demobtn").onclick = () => { demo = demo || { step: 1 }; saveDemo(); $("demo-card").classList.add("on"); refresh(); };
 $("demo-close").onclick = () => { demo = null; localStorage.removeItem(DEMO_KEY); $("demo-card").classList.remove("on"); };
 function stepRow(n, title, sub, state, buttons) {
   const row = el("div", "step " + state);
