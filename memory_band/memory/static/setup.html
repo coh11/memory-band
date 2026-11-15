@@ -129,8 +129,7 @@ function drawBar() {
   const lw = $("listener");
   lw.hidden = status.listener_alive;
   if (!status.listener_alive) {
-    const t = el("span", "techy"); t.append(document.createTextNode("For the helper: on the home computer, run "), el("code", null, ".venv/bin/python memory_band/band_bridge.py"));
-    lw.replaceChildren(el("b", null, "The band isn't connected yet. "), document.createTextNode("Tap the band twice and keep it close to the computer."), t);
+    lw.replaceChildren(el("b", null, "The band isn't connected yet. "), document.createTextNode("Tap the band twice and keep it close to the computer."));
   }
 }
 
