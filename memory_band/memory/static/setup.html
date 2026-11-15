@@ -33,17 +33,20 @@
   .warn { background:#fff1f1; border:2px solid #f1b5b5; color:var(--bad); border-radius:14px; padding:12px 14px; font-size:19px; margin-top:12px; }
   .warn code { font-size:16px; background:#fff; padding:2px 5px; border-radius:5px; }
   .small { font-size:18px; color:var(--muted); }
-  body { font-size:24px; color:#14161a; background:#fbf8f1; }
-  .card { border-width:2px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  :root { --bg:#faf8f3; --ok:#1d6b34; --accent:#1d6b34; --line:#d9d4c7; --ink:#111; --muted:#4b4b4b; }
+  body { font-size:24px; color:#111; background:#faf8f3; }
+  .card { border:1px solid var(--line); border-radius:6px; box-shadow:none; }
   .how { font-size:26px; line-height:1.45; }
-  .icon { font-size:88px; text-align:center; }
-  h1 { font-size:38px; text-align:center; }
-  button { min-height:64px; font-size:28px; }
-  button.light { font-size:24px; border:2px solid #cfc7b6; }
-  .steps span { height:12px; }
+  .icon { font-size:56px; }
+  h1 { font-size:36px; }
+  button { min-height:64px; font-size:26px; border-radius:6px; font-weight:600; }
+  button.light { font-size:24px; background:#fff; border:1px solid #9c9585; }
+  .dot { border-width:3px; } .dot.next { animation:none; border-color:var(--ok); color:var(--ok); }
+  .steps span { height:10px; border-radius:2px; }
   .top { font-size:20px; font-weight:600; }
-  .small { font-size:20px; text-align:center; margin-top:12px; }
-  button:focus-visible, a:focus-visible { outline:4px solid #f0b400; outline-offset:3px; }
+  .small { font-size:20px; margin-top:12px; }
+  .warn { border-radius:6px; border-width:1px; }
+  button:focus-visible, a:focus-visible { outline:3px solid #111; outline-offset:2px; }
   @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
   .big-ok { font-size:90px; text-align:center; color:var(--ok); line-height:1; }
 </style>
@@ -92,7 +95,7 @@ function drawBar() {
 }
 
 function drawWelcome(card) {
-  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home 🏡"));
+  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home"));
   card.append(el("div", "how", "A few short steps, about 3 minutes (the toilet ones are optional). Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
   const b = status.band || {};
   card.append(el("div", "msg " + (b.connected ? "ok" : "bad"), b.connected ? `Band ${b.name || ""} connected ✓` : "Band not connected yet"));
@@ -112,7 +115,7 @@ function drawCalibration(card, s) {
     dots.append(el("div", "dot" + (done ? " on" : (next ? " next" : "")), done ? "✓" : String(i + 1)));
   }
   card.append(dots);
-  card.append(el("div", "count", ["recording", "sample"].includes(state) ? `Got ${n} of 3 ✓` : ""));
+  card.append(el("div", "count", ["recording", "sample"].includes(state) ? `${n} of 3 recorded` : ""));
   let msg = "", cls = "";
   if (state === "idle") msg = "Press Start when you're ready.";
   if (state === "saved") { msg = "Already set up ✓  (Redo to record again)"; cls = "ok"; }
@@ -152,7 +155,7 @@ function drawDone(card) {
     card.append(el("div", "msg " + cls, msg));
     card.append(button(test.result === "locked" ? "Test again" : "Restart test", async () => { const st = await api("/state"); test = { since: st.now - 1, result: null }; draw(); }, "light"));
   }
-  card.append(button("Go to my home screen 🏠", () => { location.href = "/"; }));
+  card.append(button("Go to my home screen", () => { location.href = "/"; }));
   card.append(button("Start setup again", () => go(1), "light"));
 }
 
