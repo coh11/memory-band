@@ -42,6 +42,12 @@ def _lock(now, how, data, source):
 PILL_CUES = ["cap_twist", "to_mouth"]
 
 
+
+def _pill_push(now, how):
+    w = rules.current_dose(now)
+    name = (w or {}).get("name", "pill").capitalize()
+    notify.send("user", "%s taken \u2713" % name, "Noticed at %s (%s)." % (datetime.fromtimestamp(now).strftime("%-I:%M %p"), how), "ok")
+
 def _try_pill(now, trigger):
     """A pill bottle rattle together with a motion cue (cap twist or hand to mouth) within
     pills.passive.window_seconds = the pill was taken. A second one within same_dose_seconds
@@ -58,6 +64,7 @@ def _try_pill(now, trigger):
     store.add_event(now, "pill_taken", "Took pill (%s)" % how, {"passive": True, "cues": sorted(cues)}, "band")
     rules.resolve("pill", how, now)
     rules.check_double_dose(now)
+    _pill_push(now, how)
     return "pill_taken"
 
 
@@ -191,6 +198,7 @@ def handle_gesture(kind, data=None, now=None, source="band"):
             else:
                 store.add_event(now, "pill_taken", "Took pill (pill bottle shake)", data, "shake")
                 rules.resolve("pill", "pill bottle", now)
+                _pill_push(now, "pill bottle shake")
                 result = "pill_taken"
         else:
             store.add_event(now, "gesture", kind, data, source)
