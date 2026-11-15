@@ -119,14 +119,14 @@
 <div id="fallbar"></div>
 <header>
   <h1>Memory Band <span class="muted" id="who"></span></h1>
-  <div><span id="now"></span><span id="demo" class="badge demo" hidden>demo clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
+  <div><span id="now"></span><span id="demo" class="badge demo" hidden>test clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
     <div class="topbtns"><a class="btn" href="/setup">Teach the band</a></div></div>
 </header>
 <main>
   <section class="card wide" id="demo-card">
-    <h2>Demo: forgot to lock the door → push → locked → resolved</h2>
+    <h2>Walkthrough: forgot to lock the door → push → locked → resolved</h2>
     <div id="demo-steps"></div>
-    <div style="margin-top:10px"><button class="light" id="demo-close">Close demo</button></div>
+    <div style="margin-top:10px"><button class="light" id="demo-close">Close</button></div>
   </section>
 
   <section class="card wide">
@@ -168,19 +168,19 @@
   </details>
 
   <details class="card wide demo-controls">
-    <summary>Demo controls</summary>
-    <div class="bathbtns" style="margin-top:8px;font-size:15px">Bathroom demo (no toilet needed):
+    <summary>Try it without the band</summary>
+    <div class="bathbtns" style="margin-top:8px;font-size:15px">Bathroom:
       <button class="light" onclick="fetch('/api/demo/paper',{method:'POST'})">🧻 Toilet paper sound</button>
       <button class="light" onclick="fetch('/api/demo/flush',{method:'POST'})">🚽 Flush</button></div>
-    <div class="bathbtns" style="margin-top:6px;font-size:15px">Door demo:
+    <div class="bathbtns" style="margin-top:6px;font-size:15px">Door:
       <button class="light" onclick="fetch('/api/demo/leave',{method:'POST'})">🚪 Leave home (without locking)</button></div>
-    <div class="bathbtns" style="margin-top:6px;font-size:15px">Water demo:
+    <div class="bathbtns" style="margin-top:6px;font-size:15px">Water:
       <button class="light" onclick="fetch('/api/demo/hydration-due',{method:'POST'})">⏰ Water reminder now</button>
       <button class="light" onclick="fetch('/api/demo/drink',{method:'POST'})">💧 Drink</button></div>
-    <div class="bathbtns" style="margin-top:6px;font-size:15px">Band demo:
+    <div class="bathbtns" style="margin-top:6px;font-size:15px">Band:
       <button class="light" onclick="fetch('/api/demo/off-wrist',{method:'POST'})">⌚ Took band off</button>
       <button class="light" onclick="fetch('/api/demo/on-wrist',{method:'POST'})">⌚ Put band on</button>
-      <button class="light" onclick="fetch('/api/demo/off-wrist?seconds=30',{method:'POST'})">Real band: off-wrist after 30 s still</button></div>
+      <button class="light" onclick="fetch('/api/demo/off-wrist?seconds=30',{method:'POST'})">Off-wrist after 30 s still</button></div>
   </details>
 
 </main>
