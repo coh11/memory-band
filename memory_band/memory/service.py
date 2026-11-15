@@ -36,6 +36,10 @@ def _near(kinds, now, seconds):
 def _lock(now, how, data, source):
     store.add_event(now, "door_locked", "Locked the door (%s)" % how, data, source)
     rules.resolve("door", how, now)
+    last = store.kv_get("lock_push") or 0
+    if now - float(last) > 60:                      # one push per minute at most
+        store.kv_set("lock_push", now)
+        notify.send("user", "Front door locked \u2713", "Noticed at %s (%s)." % (datetime.fromtimestamp(now).strftime("%-I:%M %p"), how), "ok")
 
 
 # ---- pill taken, from the band alone: rattle + cap twist / hand to mouth ----------------
