@@ -4,7 +4,7 @@
 
 ## The problem
 
-People with early memory loss forget the small things that matter: locking the front door, taking the morning pill (or taking it twice), leaving the phone on a table, leaving the stove on. Families worry and keep calling to check. Most reminder apps only work if you remember to use the app, which doesn't help someone who is forgetting.
+Memory naturally gets weaker as we age, and older adults are the people most likely to forget the small things that matter: locking the front door, taking the morning pill (or taking it twice), leaving the phone on a table, leaving the stove on. These slips are common even without a diagnosis, and they become more frequent and more dangerous with age. Families worry and keep calling to check. Most reminder apps only work if you remember to use the app, which doesn't help someone whose memory is fading.
 
 ## What Memory Band does
 
