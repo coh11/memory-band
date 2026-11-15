@@ -167,10 +167,6 @@
       <button class="light" onclick="fetch('/api/demo/off-wrist?seconds=30',{method:'POST'})">Real band: off-wrist after 30 s still</button></div>
   </details>
 
-  <section class="card wide">
-    <h2>Phone notifications</h2>
-    <div id="ntfy" class="muted"></div>
-  </section>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -276,10 +272,6 @@ function render(s) {
     return li;
   }, "Nothing yet today.");
 
-  const n = $("ntfy"); n.replaceChildren();
-  n.append(document.createTextNode("Install the free ntfy app and subscribe. Wearer's phone: "), el("code", null, s.ntfy.user_topic),
-           document.createTextNode("  Family: "), el("code", null, s.ntfy.family_topic),
-           document.createTextNode(`  (server ${s.ntfy.server}${s.ntfy.dry_run ? ", dry run: printed only" : ""})`));
 }
 
 // ---- demo mode: reset -> setup -> leave home -> push -> lock -> resolved ----
