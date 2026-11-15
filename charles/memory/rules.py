@@ -13,7 +13,7 @@ LOCK = threading.RLock()
 WHO = CONFIG.get("person_name", "Mom")
 
 # alert rule -> the event kind that settles it (spoken, or a double-tap on the band)
-RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off", "flush": "toilet_flush"}
+RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off", "flush": "toilet_flush", "water": "drink_noticed"}
 
 
 def _min(n):
@@ -53,6 +53,8 @@ def follow_up_text(a, how, now):
         return "Got your %s" % item, "You picked up your %s at %s. Thanks!%s" % (item, t, took)
     if rule == "stove":
         return "Stove off", "Stove confirmed off at %s, thanks!%s" % (t, took)
+    if rule == "water":
+        return "Drink noticed", "Drink noticed at %s, thanks! 💧%s" % (t, took)
     if rule == "flush":
         return "Toilet flushed", "Toilet flushed at %s, thanks!%s" % (t, took)
     if rule == "bathroom":
@@ -254,6 +256,53 @@ def check_forgot_flush(now):
         return
 
 
+# ---- hydration -----------------------------------------------------------------------
+def _hm(day, hhmm):
+    h, m = (int(x) for x in hhmm.split(":"))
+    return day.replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+
+
+def drinks_today(now):
+    start = datetime.fromtimestamp(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    return [e for e in store.events(since=start, kinds=["drink_noticed"]) if e["ts"] <= now]
+
+
+def hydration_interval():
+    h = CONFIG.get("hydration", {})
+    demo = float(store.kv_get("hydration_demo_seconds") or h.get("demo_interval_seconds") or 0)
+    return demo if demo > 0 else float(h.get("interval_hours", 3)) * 3600
+
+
+def water_reminder(now, since_ts, key):
+    h = CONFIG.get("hydration", {})
+    return raise_alert("water", key, "info", "user", "Time for a glass of water",
+                       "Time for a glass of water 💧 No drink noticed since %s." % clock.hhmm(since_ts),
+                       confirm="drink_noticed", escalate_minutes=h.get("family_after_minutes", 60), now=now)
+
+
+def check_hydration(now):
+    """No drink noticed for interval_hours in waking hours -> a push to the wearer (the family
+    hears if it stays open family_after_minutes). Counting starts when the server first runs
+    that day, so a late start doesn't nag straight away."""
+    h = CONFIG.get("hydration", {})
+    if not h.get("enabled", True):
+        return
+    day = datetime.fromtimestamp(now)
+    wake, sleep = _hm(day, h.get("waking_start", "08:00")), _hm(day, h.get("waking_end", "21:00"))
+    if not (wake <= now <= sleep):
+        return
+    mon = store.kv_get("hydration_monitor") or {}
+    if mon.get("day") != day.strftime("%Y-%m-%d"):
+        mon = {"day": day.strftime("%Y-%m-%d"), "since": now}
+        store.kv_set("hydration_monitor", mon)
+    if any(a["rule"] == "water" for a in store.alerts(open_only=True)):
+        return
+    drinks = drinks_today(now)
+    ref = max([wake, float(mon["since"])] + ([drinks[0]["ts"]] if drinks else []))
+    if now >= ref + hydration_interval():
+        water_reminder(now, drinks[0]["ts"] if drinks else ref, "water:%d" % int(ref))
+
+
 def flushes_today(now):
     start = datetime.fromtimestamp(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     return [e for e in store.events(since=start, kinds=["toilet_flush"]) if e["ts"] <= now]
@@ -354,7 +403,7 @@ def check_escalations(now):
             log.info("ESCALATED %s to family", a["rule"])
 
 
-CHECKS = [check_forgot_flush, check_no_flush, check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
+CHECKS = [check_hydration, check_forgot_flush, check_no_flush, check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
 
 
 def run_rules(now=None):

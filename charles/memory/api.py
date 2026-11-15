@@ -165,6 +165,27 @@ def demo_arrive():
     return service.handle_presence("home", "phone arrived Home (demo button)", source="demo")
 
 
+@router.post("/demo/drink")
+def demo_drink():
+    """Dashboard 💧 button: a drink noticed (resolves an open water reminder)."""
+    return {"result": service.handle_drink(source="demo")}
+
+
+@router.post("/demo/hydration-due")
+def demo_hydration_due(seconds: Optional[float] = None):
+    """Demo: send the water reminder right now. ?seconds=30 also makes the reminder repeat
+    every 30 s without a drink (?seconds=0 goes back to the config's interval)."""
+    if seconds is not None:
+        store.kv_set("hydration_demo_seconds", max(0.0, seconds))
+    now = clock.now()
+    with rules.LOCK:
+        if any(a["rule"] == "water" for a in store.alerts(open_only=True)):
+            return {"result": "already open"}
+        d = rules.drinks_today(now)
+        aid = rules.water_reminder(now, d[0]["ts"] if d else now - rules.hydration_interval(), "water:demo:%d" % int(now))
+    return {"result": "sent" if aid else "not sent", "every_seconds": rules.hydration_interval()}
+
+
 @router.post("/demo/{what}")
 def demo_sound(what: str):
     """Demo buttons without a toilet: /api/demo/flush, /api/demo/paper."""
@@ -244,8 +265,13 @@ def sim_act(body: SimAct):
     """Pretend band only (band_listener.py --sim): queue an action for it to act out.
     "flush" / "paper" also work with the real band: the server records them directly."""
     act = body.action.lstrip("@")
-    if act in ("flush", "paper") and not (store.kv_get("listener") or {}).get("sim"):
+    sim_on = (store.kv_get("listener") or {}).get("sim")
+    if act in ("flush", "paper") and not sim_on:
         return demo_sound(act)
+    if act == "drink":
+        if not sim_on:
+            return demo_drink()
+        body.action = "@to-mouth"
     q = store.kv_get("sim_queue") or []
     q.append("@" + act if act in ("flush", "paper") else body.action)
     store.kv_set("sim_queue", q)

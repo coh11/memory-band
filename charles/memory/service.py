@@ -60,6 +60,34 @@ def _try_pill(now, trigger):
     return "pill_taken"
 
 
+# ---- a drink of water, from the band alone: hand to mouth that isn't a pill -------------
+def _try_drink(now, data, source="band"):
+    """Hand to mouth (a sip: the raise took sip_min..sip_max seconds) with no pill bottle
+    rattle in the last not_pill_within_seconds = a drink. One per debounce_seconds."""
+    h = CONFIG.get("hydration", {})
+    if source == "band":
+        secs = data.get("seconds")
+        if secs is not None and not (h.get("sip_min_seconds", 0.3) <= secs <= h.get("sip_max_seconds", 4.0)):
+            return None
+        if _near(["pill_rattle", "pill_taken"], now, h.get("not_pill_within_seconds", 30)):
+            return None
+    if _near(["drink_noticed"], now, h.get("debounce_seconds", 180)):
+        return "drink_already_counted"
+    clink = bool(_near(["impact", "setdown_clack"], now, h.get("clink_within_seconds", 10)))
+    store.add_event(now, "drink_noticed", "Drank water (hand to mouth%s)" % (" + glass clink" if clink else "")
+                    if source == "band" else "Drank water (%s)" % source, dict(data, clink=clink), source)
+    rules.resolve("water", "drink noticed", now)
+    return "drink_noticed"
+
+
+def handle_drink(now=None, source="demo"):
+    now = now if now is not None else clock.now()
+    with rules.LOCK:
+        result = _try_drink(now, {}, source=source)
+    rules.run_rules(now)
+    return result
+
+
 # ---- phone set down / picked up / left behind --------------------------------------------
 def _items_cfg():
     return CONFIG["items"].get("passive", {})
@@ -143,6 +171,8 @@ def handle_gesture(kind, data=None, now=None, source="band"):
         elif kind in PILL_CUES:
             store.add_event(now, kind, GESTURE_TEXT[kind], data, "band")
             result = _try_pill(now, kind) or kind
+            if kind == "to_mouth" and result == "to_mouth":
+                result = _try_drink(now, data) or result
         elif kind == "set_down":
             store.add_event(now, kind, GESTURE_TEXT[kind], data, "band")
             result = _try_place(now) or kind
@@ -383,6 +413,12 @@ def _phone_state(now):
             "item": placed["data"].get("item") if placed else None}
 
 
+def _water_state(now):
+    d = rules.drinks_today(now)
+    return {"drinks_today": len(d), "last_at": clock.hhmm(d[0]["ts"]) if d else None,
+            "every_minutes": round(rules.hydration_interval() / 60.0, 1)}
+
+
 def _bathroom_state(now):
     fl = rules.flushes_today(now)
     return {"flushes_today": len(fl), "last_at": clock.hhmm(fl[0]["ts"]) if fl else None,
@@ -417,6 +453,7 @@ def state():
         "stove": {"on": bool(stove_on and not stove_off), "since": clock.hhmm(stove_on["ts"]) if stove_on and not stove_off else None},
         "phone": _phone_state(now),
         "bathroom": _bathroom_state(now),
+        "water": _water_state(now),
         "fall": {"active": bool(fall), "seconds_left": max(0, int(fall["deadline"] - now)) if fall else 0},
         "alerts": [_alert_view(a) for a in store.alerts(limit=50)],
         "calibration": store.kv_get("calib"),

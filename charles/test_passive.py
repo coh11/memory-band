@@ -243,6 +243,48 @@ def test_bathroom_rules():
           and all(m["topic"] != rules.notify.TOPICS["user"] for m in notify.sent[n:]), notify.sent[n:])
 
 
+def test_hydration():
+    """Drinks from the band's hand-to-mouth, and the water reminder (in-memory, dry run)."""
+    from memory import rules, service, store         # already on the throwaway database (test_bathroom_rules)
+    from datetime import datetime
+    store._db.execute("DELETE FROM events")
+    store._db.execute("DELETE FROM alerts")
+    store.kv_set("hydration_demo_seconds", 0)
+    day = datetime.now().replace(hour=10, minute=0, second=0, microsecond=0)
+    t0 = day.timestamp()
+    store.kv_set("hydration_monitor", {"day": day.strftime("%Y-%m-%d"), "since": t0})
+    sip = {"dz": 0.3, "tilt": 60.0, "seconds": 0.8}
+    r = service.handle_gesture("to_mouth", sip, now=t0 + 10)
+    check("hand to mouth (sip) -> drink", r == "drink_noticed", r)
+    r = service.handle_gesture("to_mouth", sip, now=t0 + 60)
+    check("second sip within 3 min counts once", r == "drink_already_counted" and len(rules.drinks_today(t0 + 61)) == 1, r)
+    service.handle_signal("pill_rattle", {"value": 0.9}, now=t0 + 400)
+    r = service.handle_gesture("to_mouth", sip, now=t0 + 410)
+    check("hand to mouth right after a pill rattle -> pill, not a drink", r != "drink_noticed" and len(rules.drinks_today(t0 + 411)) == 1, r)
+    r = service.handle_gesture("to_mouth", dict(sip, seconds=9.0), now=t0 + 1000)
+    check("a 9 s slow arm raise is not a sip", r != "drink_noticed", r)
+    every = rules.hydration_interval()
+    rules.run_rules(t0 + 10 + every - 5)
+    check("no water reminder before the interval", not [a for a in store.alerts(open_only=True) if a["rule"] == "water"])
+    rules.run_rules(t0 + 10 + every + 5)
+    w = [a for a in store.alerts(open_only=True) if a["rule"] == "water"]
+    check("no drink for the interval -> water reminder to the wearer", len(w) == 1 and w[0]["audience"] == "user", w)
+    late = datetime.now().replace(hour=22, minute=30).timestamp()
+    check("no reminder at night", rules.check_hydration(late) is None and len([a for a in store.alerts() if a["rule"] == "water"]) == 1)
+    service.handle_gesture("to_mouth", sip, now=t0 + 10 + every + 60)
+    a = [a for a in store.alerts() if a["rule"] == "water"][0]
+    check("a drink resolves it with a follow-up", a["resolved"] and "drink noticed" in (a.get("follow_up") or "").lower(), a.get("follow_up"))
+    store.kv_set("hydration_demo_seconds", 30)
+    t2 = t0 + 10 + every + 60
+    rules.run_rules(t2 + 25)
+    check("demo interval 30 s: nothing at 25 s", not [a for a in store.alerts(open_only=True) if a["rule"] == "water"])
+    rules.run_rules(t2 + 35)
+    check("demo interval 30 s: reminder at 35 s", len([a for a in store.alerts(open_only=True) if a["rule"] == "water"]) == 1)
+    service.handle_tap("double-tap", now=t2 + 40)
+    check("double-tap = I drank", not [a for a in store.alerts(open_only=True) if a["rule"] == "water"])
+    store.kv_set("hydration_demo_seconds", 0)
+
+
 if __name__ == "__main__":
     test_sounds()
     test_motion()
@@ -250,5 +292,6 @@ if __name__ == "__main__":
     test_walk()
     test_bathroom_sounds()
     test_bathroom_rules()
+    test_hydration()
     print("\n%s" % ("ALL PASSED" if not FAILS else "%d FAILED: %s" % (len(FAILS), ", ".join(FAILS))))
     sys.exit(1 if FAILS else 0)

@@ -219,5 +219,18 @@
     "no_flush_by": "12:00",
     "check_window_hours": 3,
     "min_flush_gap_seconds": 60
+  },
+  "hydration": {
+    "enabled": true,
+    "interval_hours": 3,
+    "waking_start": "08:00",
+    "waking_end": "21:00",
+    "demo_interval_seconds": 0,
+    "family_after_minutes": 60,
+    "debounce_seconds": 180,
+    "not_pill_within_seconds": 30,
+    "sip_min_seconds": 0.3,
+    "sip_max_seconds": 4.0,
+    "clink_within_seconds": 10
   }
 }
