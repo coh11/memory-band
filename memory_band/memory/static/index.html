@@ -62,6 +62,36 @@
   .step.done .n { background:var(--ok); color:#fff; } .step.now .n { background:var(--accent); color:#fff; }
   .step .txt { flex:1; } .step .sub { font-size:16px; color:var(--muted); }
   .step.done .sub { color:var(--ok); font-weight:600; }
+
+  /* ---- older-adult friendly restyle ---- */
+  :root { --bg:#fbf8f1; --ink:#14161a; --muted:#4a4f57; --ok:#17692a; --warn:#8a5200; --bad:#b01f1f; --accent:#1f4fb8; --line:#ddd6c8; }
+  body { font-size:22px; line-height:1.5; }
+  header { padding:26px 28px 10px; }
+  h1 { font-size:40px; } h2 { font-size:30px; margin-bottom:16px; }
+  .card { border-radius:22px; padding:24px 26px; box-shadow:0 2px 8px rgba(0,0,0,.05); border:2px solid var(--line); }
+  .badge { font-size:17px; padding:6px 14px; }
+  .status { grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; }
+  .tile { border-radius:18px; padding:18px 20px; border-width:3px; min-height:120px; }
+  .tile .label { font-size:20px; font-weight:600; color:var(--muted); }
+  .tile .value { font-size:28px; line-height:1.25; margin-top:4px; }
+  .alert { padding:20px 22px; border-radius:18px; border-left-width:12px; font-size:22px; align-items:center; }
+  .alert .t { font-size:28px; }
+  .fixed { padding:18px 20px; border-radius:18px; border-left-width:12px; }
+  .fixed .t { font-size:24px; font-weight:650; }
+  button, a.btn { font-size:22px; min-height:56px; padding:14px 22px; border-radius:14px; font-weight:650; }
+  .alert button { background:var(--ok); color:#fff; min-width:170px; }
+  button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline:4px solid #f0b400; outline-offset:3px; }
+  input[type=text] { font-size:22px; min-height:56px; }
+  .chip { font-size:16px; padding:4px 12px; }
+  .empty { font-size:22px; }
+  .allgood { font-size:28px; font-weight:700; color:var(--ok); font-style:normal; }
+  details.card > summary { font-size:28px; font-weight:700; cursor:pointer; min-height:56px; display:flex; align-items:center; list-style:none; }
+  details.card > summary::before { content:"▸"; margin-right:12px; } details[open].card > summary::before { content:"▾"; }
+  details.card > summary::-webkit-details-marker { display:none; }
+  .demo-controls .bathbtns { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px !important; font-size:20px !important; }
+  .demo-controls { border-style:dashed; background:#f5f2ea; }
+  @media (max-width:600px) { header, main { padding-left:14px; padding-right:14px; } h1 { font-size:32px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
 </style>
 </head>
 <body>
@@ -69,7 +99,7 @@
 <header>
   <h1>Memory Band <span class="muted" id="who"></span></h1>
   <div><span id="now"></span><span id="demo" class="badge demo" hidden>demo clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
-    <div class="topbtns"><a class="btn" href="/setup">Set up the band</a><button id="demobtn">Demo mode</button></div></div>
+    <div class="topbtns"><a class="btn" href="/setup">⚙️ Teach the band</a><button id="demobtn">🎬 Demo mode</button></div></div>
 </header>
 <main>
   <section class="card wide" id="demo-card">
@@ -79,8 +109,48 @@
   </section>
 
   <section class="card wide">
-    <h2>Right now</h2>
+    <h2>🏠 How things are right now</h2>
     <div class="status" id="status"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>🔔 Needs your attention</h2>
+    <div id="alerts"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>✅ Done today</h2>
+    <div id="resolved"></div>
+  </section>
+
+  <section class="card">
+    <h2>❓ Ask me anything</h2>
+    <form id="askform"><input type="text" id="q" placeholder="Where are my keys?" autocomplete="off"><button>Ask</button></form>
+    <div id="answer"></div>
+  </section>
+
+  <section class="card">
+    <h2>📅 Coming up</h2>
+    <ul id="reminders"></ul>
+  </section>
+
+  <section class="card">
+    <h2>🔑 Where things are</h2>
+    <ul id="places"></ul>
+  </section>
+
+  <section class="card">
+    <h2>👋 People you met</h2>
+    <ul id="people"></ul>
+  </section>
+
+  <details class="card wide">
+    <summary>🕒 Today's activity</summary>
+    <ul id="timeline"></ul>
+  </details>
+
+  <details class="card wide demo-controls">
+    <summary>🎬 Demo controls (for the video)</summary>
     <div class="bathbtns" style="margin-top:8px;font-size:15px">Bathroom demo (no toilet needed):
       <button class="light" onclick="fetch('/api/demo/paper',{method:'POST'})">🧻 Toilet paper sound</button>
       <button class="light" onclick="fetch('/api/demo/flush',{method:'POST'})">🚽 Flush</button></div>
@@ -91,46 +161,10 @@
       <button class="light" onclick="fetch('/api/demo/off-wrist',{method:'POST'})">⌚ Took band off</button>
       <button class="light" onclick="fetch('/api/demo/on-wrist',{method:'POST'})">⌚ Put band on</button>
       <button class="light" onclick="fetch('/api/demo/off-wrist?seconds=30',{method:'POST'})">Real band: off-wrist after 30 s still</button></div>
-  </section>
+  </details>
 
   <section class="card wide">
-    <h2>Open issues</h2>
-    <div id="alerts"></div>
-  </section>
-
-  <section class="card wide">
-    <h2>Resolved</h2>
-    <div id="resolved"></div>
-  </section>
-
-  <section class="card">
-    <h2>Ask</h2>
-    <form id="askform"><input type="text" id="q" placeholder="Where are my keys?" autocomplete="off"><button>Ask</button></form>
-    <div id="answer"></div>
-  </section>
-
-  <section class="card">
-    <h2>Coming up</h2>
-    <ul id="reminders"></ul>
-  </section>
-
-  <section class="card">
-    <h2>Where things are</h2>
-    <ul id="places"></ul>
-  </section>
-
-  <section class="card">
-    <h2>People</h2>
-    <ul id="people"></ul>
-  </section>
-
-  <section class="card wide">
-    <h2>Today</h2>
-    <ul id="timeline"></ul>
-  </section>
-
-  <section class="card wide">
-    <h2>Phone notifications</h2>
+    <h2>📱 Phone notifications</h2>
     <div id="ntfy" class="muted"></div>
   </section>
 </main>
@@ -165,26 +199,26 @@ function render(s) {
   const st = $("status"); st.replaceChildren();
   s.pills.forEach((p) => {
     const [txt, cls] = PILL[p.status] || [p.status, ""];
-    st.append(tile(`${p.name} (${p.time})`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
+    st.append(tile(`💊 ${p.name} (${p.time})`, txt + (p.taken_at.length ? " · " + p.taken_at.join(", ") : ""), cls));
   });
   const pr = s.presence || {};
-  st.append(tile("Where", pr.state === "away" ? `Out since ${pr.since}` : "Home" + (pr.since ? ` since ${pr.since}` : ""), pr.state === "away" ? "warn" : "ok"));
+  st.append(tile("📍 Where", pr.state === "away" ? `Out since ${pr.since}` : "Home" + (pr.since ? ` since ${pr.since}` : ""), pr.state === "away" ? "warn" : "ok"));
   const how = s.door.how === "twist" ? " (key turn)" : (s.door.how === "tap" ? " (tap)" : "");
-  st.append(tile("Front door", s.door.ok ? `Locked ${s.door.locked_at}${how}` : (s.door.left_at ? `Not locked (left ${s.door.left_at})` : "No lock heard yet"), s.door.ok ? "ok" : (s.door.left_at ? "bad" : "warn")));
-  st.append(tile("Stove", s.stove.on ? `On since ${s.stove.since}` : "Off", s.stove.on ? "warn" : "ok"));
+  st.append(tile("🚪 Front door", s.door.ok ? `Locked ✓ ${s.door.locked_at}${how}` : (s.door.left_at ? `Not locked (left ${s.door.left_at})` : "Not locked yet today"), s.door.ok ? "ok" : (s.door.left_at ? "bad" : "warn")));
+  st.append(tile("🍳 Stove", s.stove.on ? `On since ${s.stove.since}` : "Off", s.stove.on ? "warn" : "ok"));
   const ph = s.phone || {};
-  st.append(tile("Phone", ph.down_at ? `Set down ${ph.down_at}` : "With you (or not tracked)", ph.down_at ? "warn" : "ok"));
+  st.append(tile("📱 Phone", ph.down_at ? `Set down ${ph.down_at}` : "With you (or not tracked)", ph.down_at ? "warn" : "ok"));
   const wr = s.wear || {};
-  st.append(tile("Band", wr.state === "not_worn" ? `Not worn since ${wr.since}` : "Worn" + (wr.since ? ` since ${wr.since}` : ""), wr.state === "not_worn" ? "warn" : "ok"));
+  st.append(tile("⌚ Band on wrist", wr.state === "not_worn" ? `Not worn since ${wr.since}` : "Worn" + (wr.since ? ` since ${wr.since}` : ""), wr.state === "not_worn" ? "warn" : "ok"));
   const wt = s.water || {};
   const waterAlert = (s.alerts || []).some((a) => a.rule === "water" && !a.resolved && !a.acked);
-  st.append(tile("Water", waterAlert ? "Time for a glass of water 💧" : (wt.drinks_today ? `${wt.drinks_today} drink${wt.drinks_today > 1 ? "s" : ""} today, last at ${wt.last_at}` : "No drink noticed yet today"),
+  st.append(tile("💧 Water", waterAlert ? "Time for a glass of water 💧" : (wt.drinks_today ? `${wt.drinks_today} drink${wt.drinks_today > 1 ? "s" : ""} today, last at ${wt.last_at}` : "No drink noticed yet today"),
                  waterAlert ? "warn" : (wt.drinks_today ? "ok" : "")));
   const bt = s.bathroom || {};
   const flushAlert = (s.alerts || []).some((a) => a.rule === "flush" && !a.resolved && !a.acked);
-  st.append(tile("Bathroom", flushAlert ? "Toilet not flushed?" : (bt.flushes_today ? `${bt.flushes_today} flush${bt.flushes_today > 1 ? "es" : ""} today, last at ${bt.last_at}` : "No flush heard today"),
+  st.append(tile("🚽 Bathroom", flushAlert ? "Toilet not flushed?" : (bt.flushes_today ? `${bt.flushes_today} flush${bt.flushes_today > 1 ? "es" : ""} today, last at ${bt.last_at}` : "No flush heard today"),
                  flushAlert ? "warn" : (bt.flushes_today ? "ok" : "")));
-  st.append(tile("Fall", s.fall.active ? `Checking… ${s.fall.seconds_left}s` : "No fall", s.fall.active ? "bad" : "ok"));
+  st.append(tile("🛟 Fall", s.fall.active ? `Checking… ${s.fall.seconds_left}s` : "No fall", s.fall.active ? "bad" : "ok"));
 
   const fb = $("fallbar");
   fb.className = s.fall.active ? "on" : "";
@@ -192,7 +226,7 @@ function render(s) {
 
   const al = $("alerts"); al.replaceChildren();
   const open = s.alerts.filter((a) => !a.acked && !a.resolved);
-  if (!open.length) al.append(el("div", "empty", "No open issues. All good."));
+  if (!open.length) al.append(el("div", "empty allgood", "All good ✓  Nothing needs your attention."));
   open.forEach((a) => {
     const box = el("div", "alert " + a.level);
     const body = el("div");
@@ -204,12 +238,12 @@ function render(s) {
     chips.append(el("span", "chip", "waiting for the fix…"));
     body.append(el("div", "t", a.title), el("div", "m", a.message), chips);
     box.append(body);
-    const btn = el("button", "light", "Got it"); btn.onclick = () => ack(a.id); box.append(btn);
+    const btn = el("button", "", "I did it ✓"); btn.onclick = () => ack(a.id); box.append(btn);
     al.append(box);
   });
   const rs = $("resolved"); rs.replaceChildren();
   const fixed = s.alerts.filter((a) => a.resolved || a.acked);
-  if (!fixed.length) rs.append(el("div", "empty", "Nothing resolved yet today."));
+  if (!fixed.length) rs.append(el("div", "empty", "Nothing to show yet today."));
   fixed.slice(0, 20).forEach((a) => {
     const box = el("div", "fixed");
     const body = el("div");

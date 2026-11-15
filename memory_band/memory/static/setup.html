@@ -33,6 +33,18 @@
   .warn { background:#fff1f1; border:2px solid #f1b5b5; color:var(--bad); border-radius:14px; padding:12px 14px; font-size:19px; margin-top:12px; }
   .warn code { font-size:16px; background:#fff; padding:2px 5px; border-radius:5px; }
   .small { font-size:18px; color:var(--muted); }
+  body { font-size:24px; color:#14161a; background:#fbf8f1; }
+  .card { border-width:2px; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+  .how { font-size:26px; line-height:1.45; }
+  .icon { font-size:88px; text-align:center; }
+  h1 { font-size:38px; text-align:center; }
+  button { min-height:64px; font-size:28px; }
+  button.light { font-size:24px; border:2px solid #cfc7b6; }
+  .steps span { height:12px; }
+  .top { font-size:20px; font-weight:600; }
+  .small { font-size:20px; text-align:center; margin-top:12px; }
+  button:focus-visible, a:focus-visible { outline:4px solid #f0b400; outline-offset:3px; }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; } }
   .big-ok { font-size:90px; text-align:center; color:var(--ok); line-height:1; }
 </style>
 </head>
@@ -80,7 +92,7 @@ function drawBar() {
 }
 
 function drawWelcome(card) {
-  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home"));
+  card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home 🏡"));
   card.append(el("div", "how", "A few short steps, about 3 minutes (the toilet ones are optional). Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
   const b = status.band || {};
   card.append(el("div", "msg " + (b.connected ? "ok" : "bad"), b.connected ? `Band ${b.name || ""} connected ✓` : "Band not connected yet"));
@@ -100,7 +112,7 @@ function drawCalibration(card, s) {
     dots.append(el("div", "dot" + (done ? " on" : (next ? " next" : "")), done ? "✓" : String(i + 1)));
   }
   card.append(dots);
-  card.append(el("div", "count", ["recording", "sample"].includes(state) ? `${n} of 3` : ""));
+  card.append(el("div", "count", ["recording", "sample"].includes(state) ? `Got ${n} of 3 ✓` : ""));
   let msg = "", cls = "";
   if (state === "idle") msg = "Press Start when you're ready.";
   if (state === "saved") { msg = "Already set up ✓  (Redo to record again)"; cls = "ok"; }
@@ -114,9 +126,9 @@ function drawCalibration(card, s) {
   const start = async () => { const r = await api("/calibrate/start", { action: s.key }); if (r) mine = r.id; poll(); };
   if (state === "idle") card.append(button("Start", start));
   if (state === "done" || state === "saved" || state === "default") card.append(button("Next", () => go(step + 1), "ok"));
-  if (!busy && state !== "idle") card.append(button("Redo", start, "light"));
+  if (!busy && state !== "idle") card.append(button("Try again", start, "light"));
   if (busy) card.append(button("Stop", async () => { await api("/calibrate/cancel", {}); poll(); }, "light"));
-  if (state !== "done" && state !== "default") card.append(button("Skip / use default", async () => {
+  if (state !== "done" && state !== "default") card.append(button("Skip — use the default", async () => {
     const r = await api("/calibrate/default", { action: s.key }); if (r) mine = r.id; setTimeout(() => go(step + 1), 900); poll(); }, "light"));
   if (step > 1 && !busy) card.append(button("Back", () => go(step - 1), "light"));
   card.append(el("div", "small", s.tip));
@@ -140,7 +152,7 @@ function drawDone(card) {
     card.append(el("div", "msg " + cls, msg));
     card.append(button(test.result === "locked" ? "Test again" : "Restart test", async () => { const st = await api("/state"); test = { since: st.now - 1, result: null }; draw(); }, "light"));
   }
-  card.append(button("Go to the dashboard", () => { location.href = "/"; }));
+  card.append(button("Go to my home screen 🏠", () => { location.href = "/"; }));
   card.append(button("Start setup again", () => go(1), "light"));
 }
 
@@ -148,7 +160,7 @@ function draw() {
   drawBar();
   const card = $("screen"); card.replaceChildren();
   const s = STEPS[step];
-  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of ${STEPS.length - 2}` : "Memory Band setup";
+  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of ${STEPS.length - 2}` + (STEPS[step].title && STEPS[step].title.includes("optional") ? " · Optional" : "") : "Memory Band setup";
   if (s.key === "welcome") drawWelcome(card);
   else if (s.key === "done") drawDone(card);
   else drawCalibration(card, s);
