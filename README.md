@@ -2,8 +2,6 @@
 
 **A proactive memory assistant for older adults, built on the Vexo Open band.**
 
-> 🎥 **Demo video:** _link coming soon_
-
 ## The problem
 
 People with early memory loss forget the small things that matter: locking the front door, taking the morning pill (or taking it twice), leaving the phone on a table, leaving the stove on. Families worry and keep calling to check. Most reminder apps only work if you remember to use the app, which doesn't help someone who is forgetting.
