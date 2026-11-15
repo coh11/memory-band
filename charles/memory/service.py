@@ -149,6 +149,7 @@ def handle_gesture(kind, data=None, now=None, source="band"):
         elif kind == "pickup":
             result = _pickup(now, data)
         elif kind == "walking":
+            store.kv_set("last_walk", now)
             result = _walked(now, data)
         elif kind == "pill_shake":
             w = rules.current_dose(now)
@@ -168,7 +169,7 @@ def handle_gesture(kind, data=None, now=None, source="band"):
 
 
 SIGNAL_TEXT = {"door_sound": "Door sound", "pill_rattle": "Pill bottle rattle", "setdown_clack": "Set-down clack (calibrated)",
-               "impact": "Set-down clack"}
+               "impact": "Set-down clack", "toilet_paper": "Toilet paper sound"}
 
 
 def handle_signal(kind, data=None, now=None, source="band"):
@@ -193,6 +194,18 @@ def handle_signal(kind, data=None, now=None, source="band"):
         elif kind == "pill_rattle":
             store.add_event(now, kind, SIGNAL_TEXT[kind], data, "mic")
             result = _try_pill(now, kind) or kind
+        elif kind == "toilet_flush":
+            gap = float(CONFIG.get("bathroom", {}).get("min_flush_gap_seconds", 60))
+            if store.events(since=now - gap, kinds=["toilet_flush"]):
+                result = "ignored (flush already counted)"
+            else:
+                store.add_event(now, "toilet_flush", "Toilet flushed", data, "mic" if source == "band" else source)
+                rules.resolve("flush", "flush heard", now)
+                rules.resolve("bathroom", "flush heard", now)
+                result = "toilet_flush"
+        elif kind == "toilet_paper":
+            store.add_event(now, kind, SIGNAL_TEXT[kind], data, "mic" if source == "band" else source)
+            result = kind
         elif kind in ("setdown_clack", "impact"):
             store.add_event(now, kind, SIGNAL_TEXT[kind], data, "mic")
             result = _try_place(now) or kind
@@ -370,6 +383,12 @@ def _phone_state(now):
             "item": placed["data"].get("item") if placed else None}
 
 
+def _bathroom_state(now):
+    fl = rules.flushes_today(now)
+    return {"flushes_today": len(fl), "last_at": clock.hhmm(fl[0]["ts"]) if fl else None,
+            "check_by": CONFIG.get("bathroom", {}).get("no_flush_by", "12:00")}
+
+
 def state():
     now = clock.now()
     today_start = datetime.fromtimestamp(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
@@ -397,6 +416,7 @@ def state():
                  "ok": bool(last_lock) and (not last_leave or last_lock["ts"] >= last_leave["ts"] - 15 * 60)},
         "stove": {"on": bool(stove_on and not stove_off), "since": clock.hhmm(stove_on["ts"]) if stove_on and not stove_off else None},
         "phone": _phone_state(now),
+        "bathroom": _bathroom_state(now),
         "fall": {"active": bool(fall), "seconds_left": max(0, int(fall["deadline"] - now)) if fall else 0},
         "alerts": [_alert_view(a) for a in store.alerts(limit=50)],
         "calibration": store.kv_get("calib"),

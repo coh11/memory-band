@@ -127,6 +127,33 @@
         "max_clicks": 2,
         "min_hf_ratio": 0.15,
         "uncalibrated_counts": true
+      },
+      "noise": {
+        "ratio": 4.0,
+        "min_rms": 0.006,
+        "gap_seconds": 0.3,
+        "drop_ratio": 0.3,
+        "bg_seconds": 8.0,
+        "max_store_seconds": 14.0
+      },
+      "flush": {
+        "min_seconds": 2.5,
+        "max_seconds": 10.0,
+        "min_loud_fraction": 0.85,
+        "min_flatness": 0.15,
+        "max_cv": 0.6,
+        "min_hf": 0.15,
+        "match_score": 0.85,
+        "debounce_seconds": 60
+      },
+      "paper": {
+        "min_seconds": 0.4,
+        "max_seconds": 3.0,
+        "min_loud_fraction": 0.5,
+        "min_flatness": 0.15,
+        "min_hf": 0.25,
+        "match_score": 0.85,
+        "debounce_seconds": 20
       }
     },
     "cap_twist": {
@@ -182,5 +209,15 @@
   },
   "resolution": {
     "follow_up_push": true
+  },
+  "bathroom": {
+    "forgot_flush": true,
+    "paper_max_wait_seconds": 15,
+    "flush_wait_seconds": 15,
+    "note": "demo timing: push ~30 s after toilet paper with no flush (real life: 90 and 60)",
+    "no_flush_check": true,
+    "no_flush_by": "12:00",
+    "check_window_hours": 3,
+    "min_flush_gap_seconds": 60
   }
 }

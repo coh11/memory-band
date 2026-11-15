@@ -13,7 +13,7 @@ LOCK = threading.RLock()
 WHO = CONFIG.get("person_name", "Mom")
 
 # alert rule -> the event kind that settles it (spoken, or a double-tap on the band)
-RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off"}
+RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off", "flush": "toilet_flush"}
 
 
 def _min(n):
@@ -53,6 +53,10 @@ def follow_up_text(a, how, now):
         return "Got your %s" % item, "You picked up your %s at %s. Thanks!%s" % (item, t, took)
     if rule == "stove":
         return "Stove off", "Stove confirmed off at %s, thanks!%s" % (t, took)
+    if rule == "flush":
+        return "Toilet flushed", "Toilet flushed at %s, thanks!%s" % (t, took)
+    if rule == "bathroom":
+        return "Bathroom visit", "%s's bathroom visit noticed at %s. All good." % (WHO, t)
     if rule in ("fall_check",) or how == "no answer":
         return None
     return "Done", "%s: done at %s.%s" % (a["title"], t, took)
@@ -73,7 +77,8 @@ def resolve(rule_prefix, how, now=None, follow_up=True):
     text = follow_up_text(main, how, now)
     if text:
         family = any(a["escalated"] or a["audience"] in ("family", "both") for a in closed)
-        notify.send("both" if family else "user", text[0], text[1], "ok")
+        aud = "family" if main["rule"] == "bathroom" else ("both" if family else "user")   # flushes are never pushed to the wearer
+        notify.send(aud, text[0], text[1], "ok")
         for a in closed:
             store.update_alert(a["id"], follow_up=text[1])
         log.info("RESOLVED %s (%s): %s", rule_prefix, how, text[1])
@@ -221,6 +226,55 @@ def check_stove(now):
                 confirm="stove_off", escalate_minutes=s["escalate_after_minutes"], now=now)
 
 
+# ---- bathroom ------------------------------------------------------------------------
+def check_forgot_flush(now):
+    """Toilet paper heard, then (the wearer walks away or paper_max_wait_seconds pass) and no
+    flush within flush_wait_seconds after that -> a gentle push to the wearer."""
+    b = CONFIG.get("bathroom", {})
+    if not b.get("forgot_flush", True):
+        return
+    wait, grace = float(b.get("paper_max_wait_seconds", 90)), float(b.get("flush_wait_seconds", 60))
+    if any(a["rule"] == "flush" for a in store.alerts(open_only=True)):
+        return
+    last_walk = float(store.kv_get("last_walk") or 0)
+    for p in store.events(since=now - 3600, kinds=["toilet_paper"]):
+        if p["ts"] > now or store.alert_exists("flush:%d" % p["id"]):
+            continue
+        if store.events(since=p["ts"], kinds=["toilet_flush"]):
+            continue
+        later = [e for e in store.events(since=p["ts"] + 0.001, kinds=["toilet_paper"]) if e["ts"] <= now]
+        if later:
+            continue                                     # same visit, a newer rustle: judge that one
+        left = last_walk if p["ts"] < last_walk <= p["ts"] + wait else p["ts"] + wait
+        if now < left + grace:
+            continue
+        raise_alert("flush", "flush:%d" % p["id"], "info", "user", "Toilet not flushed?",
+                    "Looks like the toilet wasn't flushed (toilet paper at %s, no flush after). "
+                    "Please go back and flush it." % clock.hhmm(p["ts"]), confirm="toilet_flush", now=now)
+        return
+
+
+def flushes_today(now):
+    start = datetime.fromtimestamp(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+    return [e for e in store.events(since=start, kinds=["toilet_flush"]) if e["ts"] <= now]
+
+
+def check_no_flush(now):
+    """No flush heard by no_flush_by (default noon): one gentle note to the family that day.
+    Only inside a few hours after that time, so starting the system late doesn't cry wolf."""
+    b = CONFIG.get("bathroom", {})
+    if not b.get("no_flush_check", True):
+        return
+    day = datetime.fromtimestamp(now)
+    h, m = (int(x) for x in b.get("no_flush_by", "12:00").split(":"))
+    at = day.replace(hour=h, minute=m, second=0, microsecond=0).timestamp()
+    if not (at <= now <= at + 3600 * float(b.get("check_window_hours", 3))) or flushes_today(now):
+        return
+    raise_alert("bathroom", "bathroom:%s" % day.strftime("%Y-%m-%d"), "info", "family", "No bathroom visit noticed",
+                "No bathroom visit noticed this morning (no toilet flush heard by %s). Nothing urgent; a gentle "
+                "check-in call with %s may help." % (b.get("no_flush_by", "12:00"), WHO), now=now)
+
+
 # ---- repeated questions --------------------------------------------------------------
 def _similar(a, b):
     if a == b:
@@ -300,7 +354,7 @@ def check_escalations(now):
             log.info("ESCALATED %s to family", a["rule"])
 
 
-CHECKS = [check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
+CHECKS = [check_forgot_flush, check_no_flush, check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
 
 
 def run_rules(now=None):

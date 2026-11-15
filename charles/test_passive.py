@@ -5,6 +5,8 @@ count (knock, voice, hum). Motion: set-down, pick-up, hand-to-mouth, a twist tha
 up/down move, walking (band step counter and accelerometer), and standing up to walk away
 (must not count as picking the phone up)."""
 import random
+
+import numpy as np
 import sys
 from pathlib import Path
 
@@ -161,10 +163,92 @@ def test_walk():
     check("arm moves at the table are not walking", not fired3, fired3)
 
 
+def bathroom_kinds(x, templates=None, seed=3):
+    got = []
+    d = sounds.SoundDetector({}, templates=templates if templates is not None else {}, on_detect=lambda k, s: got.append(k))
+    d.feed_float(sounds.with_background(x, seed=seed))
+    return got
+
+
+def test_bathroom_sounds():
+    flush, paper = sounds.synth_flush(seed=4), sounds.synth_paper(seed=4)
+    check("flush-like noise burst -> toilet_flush", "toilet_flush" in bathroom_kinds(flush), bathroom_kinds(flush))
+    check("flush is not toilet paper", "toilet_paper" not in bathroom_kinds(flush))
+    check("paper rustle -> toilet_paper", "toilet_paper" in bathroom_kinds(paper), bathroom_kinds(paper))
+    check("paper rustle is not a flush", "toilet_flush" not in bathroom_kinds(paper))
+    nots = {"voice (3 s)": sounds.synth_speech(seconds=3.0), "short click": lock_sound.synth_lock(seed=3),
+            "knock": lock_sound.synth_other("knock"), "pill rattle": sounds.synth_rattle(seed=3),
+            "faucet running 20 s": sounds.synth_flush(seed=5, whoosh=20.0, refill=0.0)}
+    for n, x in nots.items():
+        k = bathroom_kinds(x)
+        check("%s -> no flush / paper" % n, not ({"toilet_flush", "toilet_paper"} & set(k)), k)
+    two = np.concatenate([flush, np.zeros(sounds.RATE * 2), flush])
+    check("two flushes within 60 s count once", bathroom_kinds(two).count("toilet_flush") == 1, bathroom_kinds(two))
+    tpl = {"flush": [], "paper": []}
+    for a, f in (("flush", sounds.synth_flush), ("paper", sounds.synth_paper)):
+        for i in range(3):
+            d = sounds.SoundDetector({}, templates={})
+            got = []
+            d.noise.on_event = lambda desc: got.append(desc) or True
+            d.feed_float(sounds.with_background(f(seed=10 + i), seed=30 + i))
+            tpl[a].append(sounds.template_of(a, got[0]))
+    check("calibrated flush -> toilet_flush", "toilet_flush" in bathroom_kinds(flush, tpl), bathroom_kinds(flush, tpl))
+    check("calibrated paper -> toilet_paper", "toilet_paper" in bathroom_kinds(paper, tpl), bathroom_kinds(paper, tpl))
+    check("calibrated: voice -> nothing", not bathroom_kinds(sounds.synth_speech(seconds=3.0), tpl))
+
+
+def test_bathroom_rules():
+    """Server rules on a throwaway in-memory database, pushes printed (dry run)."""
+    import os
+    import sqlite3
+    os.environ["NTFY_DRY_RUN"] = "1"
+    real = sqlite3.connect
+    sqlite3.connect = lambda *a, **k: real(":memory:", check_same_thread=False)
+    try:
+        from memory import notify, rules, service, store
+    finally:
+        sqlite3.connect = real
+    if not str(store._db.execute("PRAGMA database_list").fetchone()[2]) == "":
+        check("bathroom rules use a throwaway database", False)
+        return
+    from datetime import datetime
+    t0 = datetime.now().replace(hour=16, minute=0, second=0, microsecond=0).timestamp()
+    b = rules.CONFIG["bathroom"]
+    wait, grace = b["paper_max_wait_seconds"], b["flush_wait_seconds"]
+    service.handle_signal("toilet_paper", {"value": 0.9}, now=t0)
+    rules.run_rules(t0 + wait + grace - 2)
+    check("no push before the grace time", not store.alerts(open_only=True))
+    rules.run_rules(t0 + wait + grace + 1)
+    op = [a for a in store.alerts(open_only=True) if a["rule"] == "flush"]
+    check("toilet paper, no flush -> push to the wearer", len(op) == 1 and op[0]["audience"] == "user", op)
+    rules.run_rules(t0 + wait + grace + 30)
+    check("only one forgot-flush push", len([a for a in store.alerts() if a["rule"] == "flush"]) == 1)
+    service.handle_signal("toilet_flush", {"value": 0.9}, now=t0 + wait + grace + 40)
+    a = [a for a in store.alerts() if a["rule"] == "flush"][0]
+    check("flush resolves it with a follow-up", a["resolved"] and "flushed" in (a.get("follow_up") or "").lower(), a.get("follow_up"))
+    check("flush counted today", service._bathroom_state(t0 + 100)["flushes_today"] == 1)
+    t1 = t0 + 600
+    service.handle_signal("toilet_paper", {}, now=t1)
+    service.handle_signal("toilet_flush", {}, now=t1 + 20)
+    rules.run_rules(t1 + wait + grace + 60)
+    check("paper then flush -> no push", len([a for a in store.alerts() if a["rule"] == "flush"]) == 1)
+    noon = datetime.fromtimestamp(t0).replace(hour=12, minute=5).timestamp()
+    store._db.execute("DELETE FROM events")
+    rules.run_rules(noon)
+    fam = [a for a in store.alerts(open_only=True) if a["rule"] == "bathroom"]
+    check("no flush by noon -> one family note", len(fam) == 1 and fam[0]["audience"] == "family", fam)
+    n = len(notify.sent)
+    service.handle_signal("toilet_flush", {}, now=noon + 60)
+    check("a later flush resolves the family note (family only)", not [a for a in store.alerts(open_only=True) if a["rule"] == "bathroom"]
+          and all(m["topic"] != rules.notify.TOPICS["user"] for m in notify.sent[n:]), notify.sent[n:])
+
+
 if __name__ == "__main__":
     test_sounds()
     test_motion()
     test_gestures()
     test_walk()
+    test_bathroom_sounds()
+    test_bathroom_rules()
     print("\n%s" % ("ALL PASSED" if not FAILS else "%d FAILED: %s" % (len(FAILS), ", ".join(FAILS))))
     sys.exit(1 if FAILS else 0)

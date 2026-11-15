@@ -52,6 +52,8 @@ const STEPS = [
   { key: "twist", icon: "🗝️", title: "Key turn", how: "Press Start, then turn the key in the lock, just like locking it. Do it 3 times.", tip: "Turn back between tries and pause a second." },
   { key: "pill", icon: "💊", title: "Pill bottle", how: "Press Start, then pick up your pill bottle and shake out a pill. Do it 3 times.", tip: "Put the pill back each time. Use your usual bottle." },
   { key: "setdown", icon: "📱", title: "Phone set-down", how: "Press Start, then put your phone down on a table, like at a café. Do it 3 times.", tip: "Pick it up again between tries." },
+  { key: "flush", icon: "🚽", title: "Toilet flush (optional)", how: "Works without this. To make it more accurate: press Start, then flush your toilet. Do it 3 times.", tip: "Wait for the tank to refill between flushes (about a minute). Skip to use the built-in default." },
+  { key: "paper", icon: "🧻", title: "Toilet paper (optional)", how: "Works without this. Press Start, then pull some toilet paper off the roll and tear it. Do it 3 times.", tip: "Used for the \"forgot to flush\" reminder. Skip to use the built-in default." },
   { key: "done" },
 ];
 let step = Number(localStorage.getItem("mb-setup-step") || 0);
@@ -79,7 +81,7 @@ function drawBar() {
 
 function drawWelcome(card) {
   card.append(el("div", "icon", "⌚"), el("h1", null, "Let's teach the band your home"));
-  card.append(el("div", "how", "4 short steps, about 3 minutes. Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
+  card.append(el("div", "how", "A few short steps, about 3 minutes (the toilet ones are optional). Each one: do the thing 3 times while the band listens. You can skip any step and use the default."));
   const b = status.band || {};
   card.append(el("div", "msg " + (b.connected ? "ok" : "bad"), b.connected ? `Band ${b.name || ""} connected ✓` : "Band not connected yet"));
   card.append(button("Start", () => go(1)));
@@ -122,7 +124,7 @@ function drawCalibration(card, s) {
 
 function drawDone(card) {
   card.append(el("div", "big-ok", "✓"), el("h1", null, "All set"));
-  const names = { lock: "Door lock sound", twist: "Key turn", pill: "Pill bottle", setdown: "Phone set-down" };
+  const names = { lock: "Door lock sound", twist: "Key turn", pill: "Pill bottle", setdown: "Phone set-down", flush: "Toilet flush", paper: "Toilet paper" };
   const ul = el("div", "how");
   Object.entries(names).forEach(([k, v]) => ul.append(el("div", null, (status.calibrated[k] ? "✅ " : "▫️ ") + v + (status.calibrated[k] ? "" : " (default)"))));
   card.append(ul);
@@ -146,7 +148,7 @@ function draw() {
   drawBar();
   const card = $("screen"); card.replaceChildren();
   const s = STEPS[step];
-  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of 4` : "Memory Band setup";
+  $("where").textContent = step > 0 && step < STEPS.length - 1 ? `Step ${step} of ${STEPS.length - 2}` : "Memory Band setup";
   if (s.key === "welcome") drawWelcome(card);
   else if (s.key === "done") drawDone(card);
   else drawCalibration(card, s);

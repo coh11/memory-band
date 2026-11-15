@@ -165,11 +165,21 @@ def demo_arrive():
     return service.handle_presence("home", "phone arrived Home (demo button)", source="demo")
 
 
+@router.post("/demo/{what}")
+def demo_sound(what: str):
+    """Demo buttons without a toilet: /api/demo/flush, /api/demo/paper."""
+    kinds = {"flush": "toilet_flush", "paper": "toilet_paper"}
+    if what not in kinds:
+        raise HTTPException(404, "demo is flush or paper")
+    return {"result": service.handle_signal(kinds[what], {"value": 1.0}, source="demo")}
+
+
 # ---- calibration from the setup page ---------------------------------------------------
 # The page asks for a calibration here; the running band_listener.py polls GET
 # /calibrate/status, records the samples from the live band and reports back with
 # POST /calibrate/progress. No restart, no command line.
-CAL_ACTIONS = {"lock": "Door lock sound", "twist": "Key-turn twist", "pill": "Pill bottle", "setdown": "Phone set-down"}
+CAL_ACTIONS = {"lock": "Door lock sound", "twist": "Key-turn twist", "pill": "Pill bottle", "setdown": "Phone set-down",
+               "flush": "Toilet flush", "paper": "Toilet paper"}
 
 
 @router.post("/calibrate/start")
@@ -231,9 +241,13 @@ class SimAct(BaseModel):
 
 @router.post("/sim/act")
 def sim_act(body: SimAct):
-    """Pretend band only (band_listener.py --sim): queue an action for it to act out."""
+    """Pretend band only (band_listener.py --sim): queue an action for it to act out.
+    "flush" / "paper" also work with the real band: the server records them directly."""
+    act = body.action.lstrip("@")
+    if act in ("flush", "paper") and not (store.kv_get("listener") or {}).get("sim"):
+        return demo_sound(act)
     q = store.kv_get("sim_queue") or []
-    q.append(body.action)
+    q.append("@" + act if act in ("flush", "paper") else body.action)
     store.kv_set("sim_queue", q)
     return {"queued": q}
 

@@ -7,6 +7,8 @@ Passive first (nothing to say or press). The band's mic and motion sensor only:
          with no pick-up                                                 -> "Don't forget your phone"
   band link  -> signal strength to this Mac (like band-leash)    -> "left home" (fallback; the phone's
                                                                      Shortcuts automation is the main one)
+  bathroom  toilet paper rustle, then no flush         -> "Looks like the toilet wasn't flushed" (to the wearer)
+            flushes counted; none by noon               -> gentle note to the family
   double-tap -> "yes / I did it / I'm fine"     free-fall -> fall check
 Optional extra: speech (Deepgram) -> sentences -> the server's tagger.
 Calibration: from the setup page (http://127.0.0.1:8001/setup) while this runs, or the CLI below.
@@ -16,6 +18,8 @@ Run from the repo root while the server runs (.venv/bin/uvicorn charles.main:app
   .venv/bin/python charles/band_listener.py --calibrate-sound lock   # your lock's sound 3x (= --calibrate-lock)
   .venv/bin/python charles/band_listener.py --calibrate-sound pill   # shake your pill bottle 3x
   .venv/bin/python charles/band_listener.py --calibrate-sound setdown  # put your phone on the table 3x
+  .venv/bin/python charles/band_listener.py --calibrate-sound flush  # optional: flush your toilet 3x
+  .venv/bin/python charles/band_listener.py --calibrate-sound paper  # optional: pull toilet paper off the roll 3x
   .venv/bin/python charles/band_listener.py --calibrate-twist        # record your key-turn twist 3x
   .venv/bin/python charles/band_listener.py --debug-sensors          # live sound scores + motion numbers
   .venv/bin/python charles/band_listener.py 17 --sim --script charles/demo_band.txt   # pretend band
@@ -209,6 +213,12 @@ def sim_act(what, sim, worker):
     elif what == "@knock":
         print("(pretend knock fed to the sound detector: should not count)")
         sim_sound(worker, "knock")
+    elif what == "@flush":
+        print("(pretend toilet flush fed to the sound detector)")
+        sim_sound(worker, "flush")
+    elif what == "@paper":
+        print("(pretend toilet paper rustle fed to the sound detector)")
+        sim_sound(worker, "paper")
     elif what == "@cap-twist":
         print("(pretend band: twisting a pill bottle cap)")
         sim.play_motion(P.twist_motion(150, 0.6, "x"), seconds=0.7)
@@ -261,7 +271,7 @@ def sim_act(what, sim, worker):
     return True
 
 
-SIM_SAMPLE = {"lock": "@lock-sound", "pill": "@rattle", "setdown": "@clack"}
+SIM_SAMPLE = {"lock": "@lock-sound", "pill": "@rattle", "setdown": "@clack", "flush": "@flush", "paper": "@paper"}
 
 
 # ---- calibration (from the setup page or the command line) ----------------------------------
@@ -299,7 +309,9 @@ class Calibrator:
         what = {"lock": "Lock your front door (band on the wrist you lock with)",
                 "twist": "Turn the key in your front door, like locking it",
                 "pill": "Pick up your pill bottle and shake out a pill",
-                "setdown": "Put your phone down on the table"}[self.action]
+                "setdown": "Put your phone down on the table",
+                "flush": "Flush the toilet (wait for the tank to refill between flushes)",
+                "paper": "Pull some toilet paper off the roll and tear it"}[self.action]
         return "(%d/%d) %s now..." % (i + 1, self.need, what)
 
     def _sim_next(self):
@@ -311,11 +323,20 @@ class Calibrator:
             sim.after(2.0, lambda: sim.play_motion(passive.twist_motion(110 + 10 * i, 0.5, "x"), seconds=0.6))
         else:
             act = SIM_SAMPLE[self.action]
-            sim.after(2.0, lambda: sim_act(act, sim, self.p.worker))
+            sim.after(2.0 if self.action != "flush" else 12.0, lambda: sim_act(act, sim, self.p.worker))
 
     def on_onset(self, desc):
+        if self.action in sounds.NOISE_ACTIONS:
+            return True
         if self.action not in sounds.ACTIONS:
             return self.active                # recording a twist: still keep sounds quiet
+        self._take(desc)
+        return True
+
+    def on_noise(self, desc):
+        """A whole noise event (flush / toilet paper calibration)."""
+        if self.action not in sounds.NOISE_ACTIONS:
+            return self.active
         self._take(desc)
         return True
 
@@ -358,10 +379,11 @@ class Calibrator:
         self.report("done", len(got), msg)
 
     def tick(self):
-        if self.active and time.time() - self.started > self.timeout:
+        limit = self.timeout * (4 if self.action == "flush" else 1)      # a tank takes ~1 min to refill
+        if self.active and time.time() - self.started > limit:
             n = len(self.got)
             self.action = None
-            self.report("failed", n, "Timed out after %d s with %d of %d samples. Try Redo." % (self.timeout, n, self.need))
+            self.report("failed", n, "Timed out after %d s with %d of %d samples. Try Redo." % (limit, n, self.need))
 
     def cancel(self):
         self.action = None
@@ -387,7 +409,7 @@ class Calibrator:
 
 
 CAL_LABEL = {"lock": "your door lock sound", "twist": "your key-turn twist", "pill": "your pill bottle",
-             "setdown": "your phone being set down"}
+             "setdown": "your phone being set down", "flush": "your toilet flush", "paper": "your toilet paper roll"}
 
 
 # ---- the detectors, wired up ----------------------------------------------------------------
@@ -415,6 +437,7 @@ class Pipeline:
             "/signal", {"kind": "door_sound", "value": db}))
         self.cal = Calibrator(self, self.report_cal)
         self.sound.on_onset = self.cal.on_onset
+        self.sound.noise.on_event = self.cal.on_noise
         self.twist.on_segment = self.cal.on_segment
         self.cap.on_segment = lambda seg: self.cal.active
         self.worker = SoundWorker(self.sound) if mic else None
@@ -430,14 +453,14 @@ class Pipeline:
         t = self.twist.template
         out = ["Key-turn twist: %s" % ("calibrated (axis %s, ~%.0f deg)" % (t["axis"], t["angle"]) if t else
                                        "default (calibrate on the setup page or --calibrate-twist)")]
-        for a in sounds.ACTIONS:
+        for a in sounds.CAL_SOUNDS:
             n = len(self.sound.templates.get(a) or [])
             out.append("Sound %-8s %s" % (a + ":", "mic off" if not self.mic else ("%d calibrated samples" % n) if n
                                          else "default rule (calibrate: --calibrate-sound %s)" % a))
         return out
 
     def calibrated(self):
-        return {"twist": bool(self.twist.template), **{a: bool(self.sound.templates.get(a)) for a in sounds.ACTIONS}}
+        return {"twist": bool(self.twist.template), **{a: bool(self.sound.templates.get(a)) for a in sounds.CAL_SOUNDS}}
 
     # ---- results -> server ----
     def on_twist(self, seg):
@@ -455,6 +478,11 @@ class Pipeline:
             self.post.send("/signal", {"kind": kind, "value": score})
 
     def on_sound_debug(self, info):
+        if "noise" in info:
+            n = info["noise"]
+            print("   noise event: %(seconds).1f s, flat %(flat).2f, bright %(hf).2f, steady cv %(cv).2f, loud %(loud_fraction).2f" % n
+                  + " -> %s" % (", ".join(info["kinds"]) or "nothing"))
+            return
         sc = info["scores"]
         print("   sound onset: lock %.2f  pill %.2f  setdown %.2f | %d little clicks, bright %.2f, dies away x%.1f -> %s" % (
             sc.get("lock", 0), sc.get("pill", 0), sc.get("setdown", 0), info["clicks"], info["hf"], info["decay"],
@@ -608,7 +636,7 @@ def main():
     p.add_argument("--pill-shake", action="store_true", help="count shaking the pill bottle as taking the pill")
     p.add_argument("--door-sound", action="store_true", help="note loud door sounds (hint only)")
     p.add_argument("--debug-sensors", action="store_true", help="print live sound scores and motion numbers (for tuning)")
-    p.add_argument("--calibrate-sound", choices=sorted(sounds.ACTIONS), help="record 3 samples of this sound, then exit")
+    p.add_argument("--calibrate-sound", choices=sorted(sounds.CAL_SOUNDS), help="record 3 samples of this sound, then exit")
     p.add_argument("--calibrate-lock", action="store_true", help="same as --calibrate-sound lock")
     p.add_argument("--calibrate-twist", action="store_true", help="record your key-turn twist 3 times, then exit")
     p.add_argument("--seconds", type=float, default=None, help="stop after this long (default: until Ctrl+C)")

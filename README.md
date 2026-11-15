@@ -17,6 +17,7 @@ The band on the wrist notices these actions **passively**. The wearer never has 
 | **Forgot to lock the door** | The phone leaving home, or the band's Bluetooth signal fading, means you left. A key-turn twist of the wrist means you locked up. | No key turn → "You didn't lock the door" within ~30 s. Turn the key → ✅ "Front door locked, thanks!" |
 | **Pills** | Pill-bottle rattle (mic) plus cap twist or hand to mouth (motion) | Reminder at dose time, a follow-up if it's missed, a double-dose warning if taken twice, and the family is told after 60 min |
 | **Phone left behind** | Phone set down (clack + hand resting), then walking away (step counter) with no pick-up | "Don't forget your phone" within seconds |
+| **Forgot to flush / bathroom routine** | The mic hears toilet paper rustling, then no toilet flush (steady rushing-water noise, no setup needed; optional 3-sample calibration) before you walk away | "Looks like the toilet wasn't flushed" to the wearer, ✅ when you flush. Flushes counted on the dashboard; no flush by noon sends a gentle note to the family |
 | **Fall** | Free-fall on the band | A 30 s countdown, cancelled with a double-tap; otherwise an urgent alert to the family |
 | **Stove** | A daily check answered with a double-tap (optional speech: "I turned on the stove") | Alert if it's left on |
 | **Double-tap = "yes, I did it"** | Band tap event | Answers the latest question |

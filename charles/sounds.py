@@ -143,6 +143,8 @@ def score(action, desc, templates):
 
 
 def template_of(action, desc):
+    if action in NOISE_ACTIONS:
+        return {"spec": desc["spec"], "seconds": desc["seconds"]}
     return desc["transient"].tolist() if ACTIONS[action]["mode"] == "transient" else desc["texture"]
 
 
@@ -159,12 +161,13 @@ def load_templates(action):
 
 def save_templates(action, templates):
     DATA.mkdir(parents=True, exist_ok=True)
-    template_file(action).write_text(json.dumps({"action": action, "mode": ACTIONS[action]["mode"],
+    mode = ACTIONS[action]["mode"] if action in ACTIONS else "noise"
+    template_file(action).write_text(json.dumps({"action": action, "mode": mode,
                                                  "templates": templates, "made": time.strftime("%Y-%m-%d %H:%M")}))
 
 
 def load_all():
-    return {a: load_templates(a) for a in ACTIONS}
+    return {a: load_templates(a) for a in CAL_SOUNDS}
 
 
 # ---- the detector --------------------------------------------------------------------
@@ -184,6 +187,8 @@ class SoundDetector:
         self.t = 0.0
         self.onsets = []                                     # (t, description), for calibration
         self.on_onset = None                                 # on_onset(desc) -> True: calibrating, report nothing
+        self.noise = NoiseTracker(self.c, self.templates, on_detect=lambda k, s: self.on_detect and self.on_detect(k, s),
+                                  on_debug=lambda i: self.on_debug and self.on_debug(i))
 
     def calibrated(self, action):
         return bool(self.templates.get(action))
@@ -215,6 +220,7 @@ class SoundDetector:
             self.quiet_until = self.t + self.c["refractory_seconds"]
         self.history.append(rms)
         self.ring.append(frame)
+        self.noise.frame(frame, rms, self.t)
 
     def classify(self, desc):
         """-> (list of (kind, score), {action: score})"""
@@ -293,7 +299,8 @@ def synth_speech(seed=0, gain=0.4, seconds=1.2):
 
 def synth(action, seed=0):
     return {"lock": lambda: lock_sound.synth_lock(seed=seed), "pill": lambda: synth_rattle(seed=seed),
-            "setdown": lambda: synth_setdown(seed=seed)}[action]()
+            "setdown": lambda: synth_setdown(seed=seed), "flush": lambda: synth_flush(seed=seed),
+            "paper": lambda: synth_paper(seed=seed)}[action]()
 
 
 def with_background(sound, seconds=1.2, tail=1.3, noise=0.003, seed=2):
@@ -302,3 +309,175 @@ def with_background(sound, seconds=1.2, tail=1.3, noise=0.003, seed=2):
     return np.concatenate([noise * rng.standard_normal(int(seconds * RATE)),
                            sound + noise * rng.standard_normal(len(sound)),
                            noise * rng.standard_normal(int(tail * RATE))])
+
+
+# ---- longer noises: toilet flush and toilet paper ------------------------------------
+# Not single clacks, so they don't go through the onset classifier. NoiseTracker cuts the
+# band's sound into "noise events": a stretch clearly louder than the slow room background
+# (short dips under gap_seconds are bridged). When one ends it is judged as a whole:
+#   flush  "toilet_flush"  2.5-10 s of steady, flat (noise-like, not voice) broadband sound;
+#                          the quieter tank refill after it is cut off and ignored
+#   paper  "toilet_paper"  0.4-3 s of flat, bright, uneven rustle (roll spinning / tearing)
+# Speech is rejected: it has gaps between syllables and a harmonic (not flat) spectrum.
+# With 3 calibrated samples (memory/data/sound_flush.json / sound_paper.json) the event's
+# average spectrum must match your own toilet / roll instead of the rough rule.
+NOISE_ACTIONS = {"flush": "toilet_flush", "paper": "toilet_paper"}
+CAL_SOUNDS = list(ACTIONS) + list(NOISE_ACTIONS)
+DEFAULTS["noise"] = {"ratio": 4.0, "min_rms": 0.006, "gap_seconds": 0.3, "drop_ratio": 0.3, "bg_seconds": 8.0,
+                     "max_store_seconds": 14.0}
+DEFAULTS["flush"] = {"min_seconds": 2.5, "max_seconds": 10.0, "min_loud_fraction": 0.85, "min_flatness": 0.15,
+                     "max_cv": 0.6, "min_hf": 0.15, "match_score": 0.85, "debounce_seconds": 60}
+DEFAULTS["paper"] = {"min_seconds": 0.4, "max_seconds": 3.0, "min_loud_fraction": 0.5, "min_flatness": 0.15,
+                     "min_hf": 0.25, "match_score": 0.85, "debounce_seconds": 20}
+
+
+def flatness(x, n=512):
+    """Median spectral flatness (geometric / arithmetic mean power, 100 Hz-7 kHz) over 32 ms
+    windows: ~0.5 for hiss / rushing water, under 0.1 for a voice or a hum."""
+    lo, hi = int(100 * n / RATE), int(7000 * n / RATE)
+    w = np.hanning(n)
+    vals = []
+    for i in range(0, len(x) - n, n):
+        p = np.abs(np.fft.rfft(x[i:i + n] * w))[lo:hi] ** 2 + 1e-12
+        vals.append(float(np.exp(np.mean(np.log(p))) / np.mean(p)))
+    return float(np.median(vals)) if vals else 0.0
+
+
+def noise_features(x, rms_list):
+    x = np.asarray(x, dtype=np.float32)
+    r = np.asarray(rms_list) if len(rms_list) else frame_rms(x)
+    spec_rows = []
+    for i in range(0, max(1, len(x) - NFFT), NFFT):
+        seg = x[i:i + NFFT]
+        if len(seg) < NFFT:
+            break
+        p = np.abs(np.fft.rfft(seg * _window)) ** 2
+        spec_rows.append([p[_edges[b]:_edges[b + 1]].sum() for b in range(len(_edges) - 1)])
+    spec = np.log10(np.mean(spec_rows, axis=0) + 1e-9) if spec_rows else np.zeros(len(_edges) - 1)
+    spec -= spec.mean()
+    nrm = np.linalg.norm(spec)
+    full = np.abs(np.fft.rfft(x[:min(len(x), RATE * 4)]))
+    hf = float(full[len(full) // 8:].sum() / (full.sum() + 1e-9))          # share above 1 kHz
+    loud = r[r >= 0.3 * np.median(r)] if len(r) else r
+    return {"seconds": round(len(x) / RATE, 2), "flat": round(flatness(x), 3), "hf": round(hf, 3),
+            "cv": round(float(np.std(loud) / (np.mean(loud) + 1e-9)), 3) if len(loud) else 9.0,
+            "spec": (spec / nrm if nrm > 0 else spec).tolist()}
+
+
+class NoiseTracker:
+    """Fed every 10 ms frame by SoundDetector. Calls on_detect(kind, score) for a flush / paper
+    and on_event(desc) -> True while calibrating (then nothing is reported)."""
+
+    def __init__(self, c, templates, on_detect=None, on_debug=None):
+        self.c, self.templates = c, templates            # templates: the SoundDetector's dict (shared)
+        self.on_detect, self.on_debug, self.on_event = on_detect, on_debug, None
+        self.bg = deque(maxlen=int(c["noise"]["bg_seconds"] * 100))
+        self.ev = None
+        self.wait_quiet = 0
+        self.last = {}
+        self.t = 0.0
+
+    def frame(self, frame, rms, t):
+        self.t = t
+        n = self.c["noise"]
+        bg = float(np.percentile(self.bg, 20)) if len(self.bg) >= 100 else None
+        thr = max(n["min_rms"], n["ratio"] * max(bg or 0.0, 1e-4))
+        if self.ev is None:
+            if self.wait_quiet:                          # after an event: wait for the room to go quiet again
+                self.wait_quiet = self.wait_quiet - 1 if rms < thr else 50
+                return
+            if bg is not None and rms >= thr:
+                self.ev = {"frames": [frame], "rms": [rms], "loud": 1, "gap": 0, "long": False}
+            else:
+                self.bg.append(rms)
+            return
+        e = self.ev
+        loud = rms >= thr
+        if loud and len(e["rms"]) >= 100 and rms < n["drop_ratio"] * float(np.median(e["rms"][:300])):
+            loud = False                                 # the quieter tank refill after the whoosh
+        if len(e["frames"]) < n["max_store_seconds"] * 100:
+            e["frames"].append(frame)
+            e["rms"].append(rms)
+        else:
+            e["long"] = True
+        if loud:
+            e["loud"] += 1
+            e["gap"] = 0
+        else:
+            e["gap"] += 1
+        if e["gap"] >= n["gap_seconds"] * 100:
+            self.ev = None
+            self.wait_quiet = 50
+            k = len(e["frames"]) - e["gap"]
+            if not e["long"]:
+                self.judge(np.concatenate(e["frames"][:k]), e["rms"][:k], e["loud"] / max(1, k))
+
+    def classify(self, d):
+        c = self.c
+        out = []
+        for action, kind in NOISE_ACTIONS.items():
+            a = c[action]
+            tpls = self.templates.get(action) or []
+            if tpls:
+                s = max(float(np.dot(d["spec"], t["spec"])) for t in tpls)
+                secs = [t.get("seconds", d["seconds"]) for t in tpls]
+                if s >= a["match_score"] and 0.5 * min(secs) <= d["seconds"] <= 2.0 * max(secs) + 1:
+                    out.append((kind, round(s, 3)))
+                continue
+            if not (a["min_seconds"] <= d["seconds"] <= a["max_seconds"]):
+                continue
+            if d["loud_fraction"] < a["min_loud_fraction"] or d["flat"] < a["min_flatness"] or d["hf"] < a["min_hf"]:
+                continue
+            if action == "flush" and d["cv"] > a["max_cv"]:
+                continue
+            conf = min(1.0, 0.4 + d["flat"] + 0.2 * d["loud_fraction"])
+            out.append((kind, round(conf, 3)))
+        if len(out) > 1:                                 # both: the longer one wins
+            out = [o for o in out if o[0] == ("toilet_flush" if d["seconds"] >= 2.5 else "toilet_paper")]
+        return out
+
+    def judge(self, x, rms, loud_fraction):
+        d = noise_features(x, rms)
+        d["loud_fraction"] = round(loud_fraction, 3)
+        if self.on_event and self.on_event(d):
+            return []
+        kinds = self.classify(d)
+        if self.on_debug:
+            self.on_debug({"noise": {k: v for k, v in d.items() if k != "spec"}, "kinds": [k for k, _ in kinds]})
+        out = []
+        for kind, s in kinds:
+            action = "flush" if kind == "toilet_flush" else "paper"
+            if self.t - self.last.get(kind, -1e9) < self.c[action]["debounce_seconds"]:
+                continue
+            self.last[kind] = self.t
+            out.append((kind, s))
+            if self.on_detect:
+                self.on_detect(kind, s)
+        return out
+
+
+def synth_flush(seed=0, gain=0.35, whoosh=5.0, refill=3.0):
+    """A toilet flush: rushing water (broad noise, a bit of low rumble) that swells, holds and
+    fades, then a quieter steady refill hiss."""
+    rng = np.random.default_rng(seed)
+    n = int(whoosh * RATE)
+    t = np.arange(n) / RATE
+    x = rng.standard_normal(n)
+    x = np.convolve(x, np.ones(3) / 3, mode="same")                          # gentle low-pass
+    x += 0.3 * np.sin(2 * np.pi * 90 * t) * rng.standard_normal(n) * 0.5
+    env = np.minimum(1.0, t / 0.3) * np.minimum(1.0, (whoosh - t) / 0.8) * (1 + 0.1 * np.sin(2 * np.pi * 0.7 * t))
+    x = gain * env * x / np.max(np.abs(x))
+    r = 0.06 * gain * rng.standard_normal(int(refill * RATE))
+    return np.concatenate([x, r])
+
+
+def synth_paper(seed=0, gain=0.3, seconds=1.4):
+    """Toilet paper pulled off the roll: bright uneven rustle with a few tears."""
+    rng = np.random.default_rng(seed)
+    n = int(seconds * RATE)
+    t = np.arange(n) / RATE
+    x = rng.standard_normal(n)
+    x = x - np.convolve(x, np.ones(8) / 8, mode="same")                     # brighter (high-pass)
+    env = 0.6 + 0.4 * np.abs(np.sin(2 * np.pi * 2.3 * t + rng.uniform(0, 3)))
+    env *= np.minimum(1.0, t / 0.05) * np.minimum(1.0, (seconds - t) / 0.1)
+    return gain * env * x / np.max(np.abs(x))
