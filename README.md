@@ -22,7 +22,9 @@ The band on the wrist notices these actions **passively**. The wearer never has 
 | **Stove** | A daily check answered with a double-tap (optional speech: "I turned on the stove") | Alert if it's left on |
 | **Double-tap = "yes, I did it"** | Band tap event | Answers the latest question |
 
-Setup is designed for an older person: there's no app to install. A simple browser setup page walks through calibrating your own door lock key turn, pill bottle and phone set-down (3 samples each), then a live "lock the door once" test. Notifications use the free [ntfy](https://ntfy.sh) app, which needs no account.
+### Setup anyone can do
+
+Setup is designed for people who aren't comfortable with technology, and anyone can do it: the wearer, a family member, or a caregiver. There's no app to install, no account, and no technical steps. A simple browser page shows one large, plain-language step per screen. You just do the everyday action three times (turn your door key, shake your pill bottle, set your phone down) and the band learns what it looks and sounds like in your own home. Every step can be skipped to use a sensible default or redone with one tap, and it finishes with a live "lock the door once" test so you know it works. The whole thing takes about 3 minutes. Notifications use the free [ntfy](https://ntfy.sh) app, which needs no account.
 
 ## How it works
 
