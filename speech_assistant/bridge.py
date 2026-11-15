@@ -18,7 +18,9 @@ import threading
 import urllib.request
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vexo-open-kit" / "examples" / "python"))
+_REPO = Path(__file__).resolve().parent.parent
+_KIT = next((k for k in (_REPO / "vexo-open-kit", _REPO.parent / "vexo-open-kit") if k.is_dir()), _REPO / "vexo-open-kit")
+sys.path.insert(0, str(_KIT / "examples" / "python"))     # the kit, cloned inside or next to this repo
 import kit      # finds the library and reads the command line  # noqa: E402
 import speech   # sound -> Deepgram                               # noqa: E402
 from vexo_open.sync import Band  # noqa: E402
