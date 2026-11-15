@@ -115,7 +115,7 @@
         "hf_ratio_for_click": 0.35
       },
       "pill": {
-        "match_score": 0.7,
+        "match_score": 0.4,
         "min_clicks": 3,
         "heuristic_clicks": 4,
         "heuristic_hf_ratio": 0.3,
