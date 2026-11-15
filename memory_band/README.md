@@ -130,13 +130,13 @@ MEMORY_TOKEN=<any long random string>      # protects the phone webhook
 
 Listener options: `--debug-sensors`, `--speech on|off|auto` (default auto = on if `DEEPGRAM_API_KEY` is set), `--no-mic` (twist alone then counts as locked; no sounds), `--pill-shake`, `--door-sound`, `--usb`.
 
-## End-to-end demo: forgot to lock → push → locked → resolved
+## End to end: forgot to lock → push → locked → resolved
 
 1. Terminal 1: `.venv/bin/uvicorn memory_band.main:app --port 8001`. Terminal 2: double-tap the band, then `.venv/bin/python memory_band/band_bridge.py`.
-2. Phone: ntfy app subscribed to the wearer topic (shown at the bottom of the dashboard).
-3. Dashboard → **Demo mode**: **Reset** → **Open setup** (calibrate the lock, or skip if done) → **Next** → **Leave home** (the same call the phone's geofence makes, `/api/leaving`).
-4. About 20 seconds later *"You didn't lock the door"* arrives on the phone; the demo card shows "Push sent".
-5. Lock the door with the band on (or turn the key and make it click). The alert closes by itself, *"Front door locked at 3:42 PM, thanks! (40 s after the alert)"* arrives, and the dashboard shows it under **Resolved** with "fixed in 40 s". **Run again** repeats from step 3.
+2. Phone: the ntfy app subscribed to the wearer topic set in `.env`.
+3. Leave home without locking: the phone's geofence calls `/api/leaving` (or press **Leave home** under **Try it without the band** at the bottom of the dashboard).
+4. About 20 seconds later *"You didn't lock the door"* arrives on the phone and shows under **Needs your attention**.
+5. Lock the door with the band on (or turn the key and make it click). The alert closes by itself, *"Front door locked at 3:42 PM, thanks! (40 s after the alert)"* arrives, and the dashboard shows it under **Resolved** with "fixed in 40 s".
 
 Then the other two, no buttons needed:
 
