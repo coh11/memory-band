@@ -113,14 +113,20 @@
   .okrow .label { flex:0 0 210px; color:var(--muted); font-weight:600; }
   .okrow .value { font-weight:650; } .okrow.ok .value { color:var(--ok); }
   @media (max-width:600px) { .oklist { grid-template-columns:1fr; } .okrow .label { flex-basis:120px; } }
+  header { align-items:center; }
+  .hleft { display:flex; flex-direction:column; gap:6px; }
+  .hmeta { font-size:18px; color:var(--muted); display:flex; flex-wrap:wrap; align-items:center; }
+  .hmeta .badge:first-of-type { margin-left:12px; }
 </style>
 </head>
 <body>
 <div id="fallbar"></div>
 <header>
-  <h1>Memory Band <span class="muted" id="who"></span></h1>
-  <div><span id="now"></span><span id="demo" class="badge demo" hidden>test clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span>
-    <div class="topbtns"><a class="btn" href="/setup">Teach the band</a></div></div>
+  <div class="hleft">
+    <h1>Memory Band <span class="muted" id="who"></span></h1>
+    <div class="hmeta"><span id="now"></span><span id="demo" class="badge demo" hidden>test clock</span><span id="band" class="badge"></span><span id="engine" class="badge"></span></div>
+  </div>
+  <a class="btn" href="/setup">Customize sounds</a>
 </header>
 <main>
   <section class="card wide" id="demo-card">
