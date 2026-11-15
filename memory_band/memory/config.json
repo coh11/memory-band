@@ -110,7 +110,7 @@
       "min_rms": 0.01,
       "refractory_seconds": 1.0,
       "lock": {
-        "match_score": 0.8,
+        "match_score": 0.4,
         "click_score": 0.6,
         "hf_ratio_for_click": 0.35
       },
