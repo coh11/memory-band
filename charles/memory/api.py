@@ -165,6 +165,21 @@ def demo_arrive():
     return service.handle_presence("home", "phone arrived Home (demo button)", source="demo")
 
 
+@router.post("/demo/off-wrist")
+def demo_off_wrist(seconds: Optional[float] = None):
+    """Demo: the band is taken off. ?seconds=30 instead tells the live listener to report
+    off-wrist after 30 s dead still (?seconds=0: back to the config's minutes)."""
+    if seconds is not None:
+        store.kv_set("offwrist_demo_seconds", max(0.0, seconds))
+        return {"result": "listener reports off-wrist after %s" % ("%g s dead still" % seconds if seconds else "the configured minutes")}
+    return {"result": service.handle_signal("not_worn", {"value": 0}, source="demo")}
+
+
+@router.post("/demo/on-wrist")
+def demo_on_wrist():
+    return {"result": service.handle_signal("worn", {"value": 0}, source="demo")}
+
+
 @router.post("/demo/drink")
 def demo_drink():
     """Dashboard 💧 button: a drink noticed (resolves an open water reminder)."""
@@ -253,7 +268,8 @@ def listener_heartbeat(body: dict):
     acts = store.kv_get("sim_queue") or [] if body.get("sim") else []
     if acts:
         store.kv_set("sim_queue", [])
-    return {"calibration": store.kv_get("calib") or {}, "sim_actions": acts}
+    return {"calibration": store.kv_get("calib") or {}, "sim_actions": acts,
+            "off_wrist_seconds": store.kv_get("offwrist_demo_seconds") or None}
 
 
 class SimAct(BaseModel):
@@ -268,6 +284,10 @@ def sim_act(body: SimAct):
     sim_on = (store.kv_get("listener") or {}).get("sim")
     if act in ("flush", "paper") and not sim_on:
         return demo_sound(act)
+    if act in ("off_wrist", "on_wrist", "off-wrist", "on-wrist"):
+        if not sim_on:
+            return demo_off_wrist() if act.startswith("off") else demo_on_wrist()
+        body.action = "@off-wrist" if act.startswith("off") else "@on-wrist"
     if act == "drink":
         if not sim_on:
             return demo_drink()

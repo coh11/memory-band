@@ -285,6 +285,50 @@ def test_hydration():
     store.kv_set("hydration_demo_seconds", 0)
 
 
+def test_off_wrist():
+    """Band on the table (dead still) vs. on a resting wrist (tiny wobble), then the rule."""
+    got = []
+    d = P.OffWrist({"still_seconds": 60}, on_change=lambda st, secs: got.append(st))
+    for smp in play([(P.REST_POSE, 70)], noise=0.0005, gnoise=0.1):
+        d.feed(*smp)
+    check("dead still 60 s -> not_worn", got == ["not_worn"], got)
+    for smp in play([(P.REST_POSE, 6)], noise=0.01, gnoise=2.0, seed=4):
+        d.feed(smp[0] + 70, *smp[1:])
+    check("moving again -> worn", got == ["not_worn", "worn"], got)
+    got2 = []
+    d2 = P.OffWrist({"still_seconds": 60}, on_change=lambda st, secs: got2.append(st))
+    for smp in play([(P.REST_POSE, 120)], noise=0.01, gnoise=2.0, seed=5):
+        d2.feed(*smp)
+    check("worn wrist resting (micro-tremor) 2 min -> stays worn, no report", got2 == [], got2)
+    got3 = []
+    d3 = P.OffWrist({"still_seconds": 60}, on_change=lambda st, secs: got3.append(st))
+    for smp in play([(P.REST_POSE, 30)], noise=0.0005, gnoise=0.1):
+        d3.feed(*smp)
+    check("dead still only 30 s -> nothing yet", got3 == [], got3)
+    # rules (throwaway in-memory database from test_bathroom_rules, dry run)
+    from memory import rules, service, store
+    from datetime import datetime
+    store._db.execute("DELETE FROM alerts")
+    store.kv_set("wear", None)
+    t0 = datetime.now().replace(hour=11, minute=0, second=0, microsecond=0).timestamp()
+    service.handle_signal("toilet_paper", {}, now=t0 - 4000)       # (old, settled noise for other rules)
+    service.handle_signal("toilet_flush", {}, now=t0 - 3990)
+    service.handle_signal("not_worn", {"value": 1200}, now=t0)
+    rules.run_rules(t0 + 1)
+    a = [a for a in store.alerts(open_only=True) if a["rule"] == "offwrist"]
+    check("not worn in the day -> push to the wearer", len(a) == 1 and a[0]["audience"] == "user", a)
+    check("TV sound while off the wrist doesn't count as worn", (service.handle_signal("pill_rattle", {}, now=t0 + 5) or True)
+          and (store.kv_get("wear") or {}).get("state") == "not_worn")
+    service.handle_signal("worn", {}, now=t0 + 120)
+    a = [a for a in store.alerts() if a["rule"] == "offwrist"][0]
+    check("band back on resolves it with a follow-up", a["resolved"] and "band back on" in (a.get("follow_up") or "").lower(), a.get("follow_up"))
+    night = datetime.now().replace(hour=23, minute=0, second=0, microsecond=0).timestamp()
+    service.handle_signal("not_worn", {"value": 1200}, now=night)
+    rules.check_off_wrist(night + 1)
+    check("not worn at night -> no push (sleeping / charging)", not [a for a in store.alerts(open_only=True) if a["rule"] == "offwrist"])
+    store.kv_set("wear", None)
+
+
 if __name__ == "__main__":
     test_sounds()
     test_motion()
@@ -293,5 +337,6 @@ if __name__ == "__main__":
     test_bathroom_sounds()
     test_bathroom_rules()
     test_hydration()
+    test_off_wrist()
     print("\n%s" % ("ALL PASSED" if not FAILS else "%d FAILED: %s" % (len(FAILS), ", ".join(FAILS))))
     sys.exit(1 if FAILS else 0)

@@ -13,7 +13,7 @@ LOCK = threading.RLock()
 WHO = CONFIG.get("person_name", "Mom")
 
 # alert rule -> the event kind that settles it (spoken, or a double-tap on the band)
-RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off", "flush": "toilet_flush", "water": "drink_noticed"}
+RESOLVED_BY = {"pill": "pill_taken", "door": "door_locked", "stove": "stove_off", "flush": "toilet_flush", "water": "drink_noticed", "offwrist": "band_on"}
 
 
 def _min(n):
@@ -53,6 +53,8 @@ def follow_up_text(a, how, now):
         return "Got your %s" % item, "You picked up your %s at %s. Thanks!%s" % (item, t, took)
     if rule == "stove":
         return "Stove off", "Stove confirmed off at %s, thanks!%s" % (t, took)
+    if rule == "offwrist":
+        return "Band back on", "Band back on at %s, thanks! ⌚%s" % (t, took)
     if rule == "water":
         return "Drink noticed", "Drink noticed at %s, thanks! 💧%s" % (t, took)
     if rule == "flush":
@@ -303,6 +305,24 @@ def check_hydration(now):
         water_reminder(now, drinks[0]["ts"] if drinks else ref, "water:%d" % int(ref))
 
 
+# ---- band not worn ------------------------------------------------------------------
+def check_off_wrist(now):
+    """The listener says the band has been dead still (not on a wrist): a push to the wearer
+    in waking hours (at night it's sleeping or charging). Family after family_after_minutes."""
+    o = CONFIG.get("off_wrist", {})
+    w = store.kv_get("wear") or {}
+    if not o.get("enabled", True) or w.get("state") != "not_worn":
+        return
+    day = datetime.fromtimestamp(now)
+    if not (_hm(day, o.get("waking_start", "08:00")) <= now <= _hm(day, o.get("waking_end", "21:00"))):
+        return
+    since = float(w.get("since") or now)
+    raise_alert("offwrist", "offwrist:%d" % int(since), "info", "user", "Band not on your wrist?",
+                "Looks like you're not wearing your band ⌚ (not moved since %s). Put it on so I can help you "
+                "remember things." % clock.hhmm(since), confirm="band_on",
+                escalate_minutes=o.get("family_after_minutes", 60), now=now)
+
+
 def flushes_today(now):
     start = datetime.fromtimestamp(now).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     return [e for e in store.events(since=start, kinds=["toilet_flush"]) if e["ts"] <= now]
@@ -403,7 +423,7 @@ def check_escalations(now):
             log.info("ESCALATED %s to family", a["rule"])
 
 
-CHECKS = [check_hydration, check_forgot_flush, check_no_flush, check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
+CHECKS = [check_off_wrist, check_hydration, check_forgot_flush, check_no_flush, check_pills, check_door, check_items, check_stove, check_stove_schedule, check_repeats, check_reminders, check_fall, check_escalations]
 
 
 def run_rules(now=None):
@@ -420,6 +440,8 @@ def double_tap(now, source="band"):
     """Double-tap = "yes / I did it / I'm fine". Answers the newest open question."""
     with LOCK:
         store.add_event(now, "double_tap", "Double-tap on band", {}, source)
+        if (store.kv_get("wear") or {}).get("state") == "not_worn":       # someone is touching it
+            store.kv_set("wear", {"state": "worn", "since": now})
         if cancel_fall(now, "double-tap"):
             return "Fall alarm cancelled. Glad you're OK."
         for a in store.open_confirmable():

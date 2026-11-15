@@ -233,6 +233,66 @@ class DoorSound:
         return fired
 
 
+class OffWrist:
+    """Is the band on a wrist? A worn band always shakes a little (pulse, tremor, breathing):
+    gyro and accelerometer wobble above the sensor's noise floor. On a table or the charger it
+    is dead still. Every window_seconds of motion samples: dead still if the gyro's spread is
+    under still_gyro_dps and the accelerometer's under still_g. Dead still for still_minutes ->
+    on_change("not_worn"); the first window that isn't -> on_change("worn").
+    Sound never counts as worn (a TV talks to a band on the table). No motion at all (band out
+    of reach) reports nothing: that's presence."""
+
+    def __init__(self, cfg=None, on_change=None):
+        c = dict(still_minutes=20, window_seconds=5, still_gyro_dps=0.8, still_g=0.005)
+        c.update(cfg or {})
+        self.c = c
+        self.still_seconds = float(c.get("still_seconds") or c["still_minutes"] * 60)
+        self.on_change = on_change
+        self.win = []
+        self.win_start = None
+        self.still_since = None
+        self.state = None                         # None (not known yet), "worn", "not_worn"
+        self.last = {}
+
+    def feed(self, t, ax, ay, az, gx, gy, gz):
+        if ax is None or gx is None:
+            return
+        if self.win_start is None:
+            self.win_start = t
+        self.win.append((ax, ay, az, gx, gy, gz))
+        if t - self.win_start < self.c["window_seconds"]:
+            return
+        cols = list(zip(*self.win))
+
+        def spread(v):
+            m = sum(v) / len(v)
+            return (sum((x - m) ** 2 for x in v) / len(v)) ** 0.5
+        acc = max(spread(cols[i]) for i in range(3))
+        gyr = max(spread(cols[i]) for i in range(3, 6))
+        self.last = {"acc_spread": round(acc, 4), "gyro_spread": round(gyr, 2)}
+        still = acc < self.c["still_g"] and gyr < self.c["still_gyro_dps"]
+        self.win, self.win_start = [], t
+        if still:
+            if self.still_since is None:
+                self.still_since = t - self.c["window_seconds"]
+            if t - self.still_since >= self.still_seconds and self.state != "not_worn":
+                self._set("not_worn", t - self.still_since)
+        else:
+            self.still_since = None
+            if self.state != "worn":
+                self._set("worn", 0)
+
+    def _set(self, state, still_for):
+        first = self.state is None
+        self.state = state
+        if self.on_change and not (first and state == "worn"):     # "worn" at start-up isn't news
+            self.on_change(state, still_for)
+
+    @property
+    def still_for(self):
+        return 0.0 if self.still_since is None or self.win_start is None else self.win_start - self.still_since
+
+
 def twist_motion(angle=120.0, seconds=0.5, axis="x"):
     """For the pretend band: a function for band.transport.play_motion that turns the wrist
     by `angle` degrees about `axis` in `seconds` (a half-sine speed profile)."""

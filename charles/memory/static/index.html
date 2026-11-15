@@ -87,6 +87,10 @@
     <div class="bathbtns" style="margin-top:6px;font-size:15px">Water demo:
       <button class="light" onclick="fetch('/api/demo/hydration-due',{method:'POST'})">⏰ Water reminder now</button>
       <button class="light" onclick="fetch('/api/demo/drink',{method:'POST'})">💧 Drink</button></div>
+    <div class="bathbtns" style="margin-top:6px;font-size:15px">Band demo:
+      <button class="light" onclick="fetch('/api/demo/off-wrist',{method:'POST'})">⌚ Took band off</button>
+      <button class="light" onclick="fetch('/api/demo/on-wrist',{method:'POST'})">⌚ Put band on</button>
+      <button class="light" onclick="fetch('/api/demo/off-wrist?seconds=30',{method:'POST'})">Real band: off-wrist after 30 s still</button></div>
   </section>
 
   <section class="card wide">
@@ -134,7 +138,7 @@
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const PILL = { taken: ["Taken", "ok"], double: ["Taken twice!", "bad"], later: ["Later", ""], due: ["Due now", "warn"], late: ["Not taken yet", "bad"], missed: ["Missed", "bad"] };
-const KIND = { heard: "heard", pill_taken: "pill", door_locked: "door", leaving_home: "leaving", leaving_place: "leaving", item_placed: "item", item_picked_up: "item", stove_on: "stove", stove_off: "stove", person: "person", appointment: "appointment", promise: "promise", fall: "fall", fall_cancelled: "fall", arrived_home: "home", pill_bottle: "pill", door_sound: "sound", double_tap: "band", tap: "band", help: "help", fine: "ok", lock_sound: "door", lock_twist: "door", click: "door", pill_rattle: "pill", cap_twist: "pill", to_mouth: "pill", set_down: "phone", setdown_clack: "phone", impact: "phone", toilet_flush: "bathroom", toilet_paper: "bathroom", drink_noticed: "water" };
+const KIND = { heard: "heard", pill_taken: "pill", door_locked: "door", leaving_home: "leaving", leaving_place: "leaving", item_placed: "item", item_picked_up: "item", stove_on: "stove", stove_off: "stove", person: "person", appointment: "appointment", promise: "promise", fall: "fall", fall_cancelled: "fall", arrived_home: "home", pill_bottle: "pill", door_sound: "sound", double_tap: "band", tap: "band", help: "help", fine: "ok", lock_sound: "door", lock_twist: "door", click: "door", pill_rattle: "pill", cap_twist: "pill", to_mouth: "pill", set_down: "phone", setdown_clack: "phone", impact: "phone", toilet_flush: "bathroom", toilet_paper: "bathroom", drink_noticed: "water", band_off_wrist: "band", band_on_wrist: "band" };
 const HIDE = new Set(["set_down", "impact", "setdown_clack", "cap_twist", "to_mouth", "pill_rattle", "click", "lock_twist"]);
 
 function tile(label, value, cls) {
@@ -170,6 +174,8 @@ function render(s) {
   st.append(tile("Stove", s.stove.on ? `On since ${s.stove.since}` : "Off", s.stove.on ? "warn" : "ok"));
   const ph = s.phone || {};
   st.append(tile("Phone", ph.down_at ? `Set down ${ph.down_at}` : "With you (or not tracked)", ph.down_at ? "warn" : "ok"));
+  const wr = s.wear || {};
+  st.append(tile("Band", wr.state === "not_worn" ? `Not worn since ${wr.since}` : "Worn" + (wr.since ? ` since ${wr.since}` : ""), wr.state === "not_worn" ? "warn" : "ok"));
   const wt = s.water || {};
   const waterAlert = (s.alerts || []).some((a) => a.rule === "water" && !a.resolved && !a.acked);
   st.append(tile("Water", waterAlert ? "Time for a glass of water 💧" : (wt.drinks_today ? `${wt.drinks_today} drink${wt.drinks_today > 1 ? "s" : ""} today, last at ${wt.last_at}` : "No drink noticed yet today"),

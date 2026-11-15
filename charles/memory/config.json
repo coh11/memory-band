@@ -205,6 +205,12 @@
       "timeout_seconds": 90,
       "min_twist_angle": 50,
       "poll_seconds": 1.0
+    },
+    "off_wrist": {
+      "still_minutes": 20,
+      "window_seconds": 5,
+      "still_gyro_dps": 0.8,
+      "still_g": 0.005
     }
   },
   "resolution": {
@@ -232,5 +238,11 @@
     "sip_min_seconds": 0.3,
     "sip_max_seconds": 4.0,
     "clink_within_seconds": 10
+  },
+  "off_wrist": {
+    "enabled": true,
+    "waking_start": "08:00",
+    "waking_end": "21:00",
+    "family_after_minutes": 60
   }
 }

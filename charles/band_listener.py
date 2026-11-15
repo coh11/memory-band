@@ -9,6 +9,7 @@ Passive first (nothing to say or press). The band's mic and motion sensor only:
                                                                      Shortcuts automation is the main one)
   bathroom  toilet paper rustle, then no flush         -> "Looks like the toilet wasn't flushed" (to the wearer)
             flushes counted; none by noon               -> gentle note to the family
+  off-wrist  band dead still (no pulse/tremor wobble) for 20 min    -> "you're not wearing your band"
   double-tap -> "yes / I did it / I'm fine"     free-fall -> fall check
 Optional extra: speech (Deepgram) -> sentences -> the server's tagger.
 Calibration: from the setup page (http://127.0.0.1:8001/setup) while this runs, or the CLI below.
@@ -219,6 +220,12 @@ def sim_act(what, sim, worker):
     elif what == "@paper":
         print("(pretend toilet paper rustle fed to the sound detector)")
         sim_sound(worker, "paper")
+    elif what == "@off-wrist":
+        print("(pretend band: lying dead still on the table)")
+        sim.play_motion(dict(P.REST_POSE), seconds=max(30.0, sim_off_wrist_seconds() + 10))
+    elif what == "@on-wrist":
+        print("(pretend band: back on the wrist, moving)")
+        sim.play_motion(P.twist_motion(90, 0.6, "x"), seconds=0.7)
     elif what == "@cap-twist":
         print("(pretend band: twisting a pill bottle cap)")
         sim.play_motion(P.twist_motion(150, 0.6, "x"), seconds=0.7)
@@ -269,6 +276,11 @@ def sim_act(what, sim, worker):
     else:
         return False
     return True
+
+
+def sim_off_wrist_seconds():
+    c = CFG.get("off_wrist", {})
+    return float(c.get("still_seconds") or c.get("still_minutes", 20) * 60)
 
 
 SIM_SAMPLE = {"lock": "@lock-sound", "pill": "@rattle", "setdown": "@clack", "flush": "@flush", "paper": "@paper"}
@@ -430,6 +442,7 @@ class Pipeline:
         self.gestures = passive.Gestures(CFG.get("gestures"), on_gesture=self.on_gesture, walk=self.walk,
                                          on_debug=(lambda m: print("   %s" % m)) if self.debug else None)
         self.motion = passive.MotionTracker(CFG.get("motion"), on_move=self.on_move)
+        self.wear = passive.OffWrist(CFG.get("off_wrist"), on_change=self.on_wear)
         self.presence = passive.Presence(CFG.get("presence"), on_change=self.on_presence)
         self.shake = passive.ShakeDetector(CFG.get("shake"), on_shake=lambda: (print("Pill bottle shake"),
                                            self.post.send("/gesture", {"kind": "pill_shake"})))
@@ -506,6 +519,10 @@ class Pipeline:
         if not self.cal.active:
             self.post.send("/gesture", {"kind": "walking", "steps": int(steps), "how": how})
 
+    def on_wear(self, state, still_for):
+        print("Band %s (dead still for %.0f s)" % ("NOT on the wrist" if state == "not_worn" else "back on the wrist", still_for))
+        self.post.send("/signal", {"kind": state, "value": round(still_for)})
+
     def on_presence(self, state, reason, rssi):
         print("Presence: %s (%s)" % (state, reason))
         self.post.send("/presence", {"state": state, "reason": "band: " + reason, "rssi": rssi})
@@ -517,6 +534,7 @@ class Pipeline:
         self.cap.feed(t, m.gx, m.gy, m.gz)
         self.motion.feed(t, m.ax, m.ay, m.az, m.gx, m.gy, m.gz)
         self.walk.feed_accel(t, m.ax, m.ay, m.az)
+        self.wear.feed(t, m.ax, m.ay, m.az, m.gx, m.gy, m.gz)
         if self.a.pill_shake:
             self.shake.feed(t, m.ax, m.ay, m.az)
         if self.debug and time.time() - self.last_debug >= 0.5:
@@ -525,6 +543,9 @@ class Pipeline:
             print("   motion: gyro %4.0f dps  |a| %.2f g  %s  tilt from rest %3.0f deg  steps(12s) %d  %s" % (
                 self.motion.gyro_mag, self.motion.acc_dev + self.motion.g0, "still " if self.motion.still else "moving",
                 tilt, self.walk.steps_recent, "WALKING" if self.walk.walking else (self.walk.state or "-")))
+            if self.wear.last:
+                print("   wear: gyro spread %.2f dps, accel spread %.4f g, dead still %.0f s (off-wrist after %.0f s)" % (
+                    self.wear.last["gyro_spread"], self.wear.last["acc_spread"], self.wear.still_for, self.wear.still_seconds))
 
     def on_activity(self, e):
         self.walk.feed_activity(e.steps, e.state)
@@ -543,6 +564,11 @@ class Pipeline:
 
     def heartbeat(self):
         r = self.post.call("/listener/heartbeat", {"calibrated": self.calibrated(), "mic": self.mic, "sim": self.sim is not None})
+        demo_still = (r or {}).get("off_wrist_seconds")
+        want = float(demo_still) if demo_still else float(CFG.get("off_wrist", {}).get("still_minutes", 20)) * 60
+        if want != self.wear.still_seconds:
+            self.wear.still_seconds = want
+            print("Off-wrist reminder after %.0f s dead still" % want)
         for act in (r or {}).get("sim_actions") or []:
             if self.sim is not None and not sim_act(act, self.sim, self.worker):
                 print("(unknown pretend-band action %s)" % act)

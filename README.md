@@ -19,6 +19,7 @@ The band on the wrist notices these actions **passively**. The wearer never has 
 | **Phone left behind** | Phone set down (clack + hand resting), then walking away (step counter) with no pick-up | "Don't forget your phone" within seconds |
 | **Forgot to flush / bathroom routine** | The mic hears toilet paper rustling, then no toilet flush (steady rushing-water noise, no setup needed; optional 3-sample calibration) before you walk away | "Looks like the toilet wasn't flushed" to the wearer, ✅ when you flush. Flushes counted on the dashboard; no flush by noon sends a gentle note to the family |
 | **Drink water** | Hand-to-mouth sip (motion) with no pill-bottle rattle just before; a glass clink helps | No drink for 3 h in waking hours → "Time for a glass of water 💧" to the wearer, ✅ when you sip (or double-tap); family told after 60 min. Drinks counted on the dashboard |
+| **Forgot to wear the band** | A worn band always wobbles a little (pulse, tremor); dead still for 20 min means it's on the table or charger. Sound never counts as worn | "Looks like you're not wearing your band ⌚" to the wearer in waking hours, ✅ when it moves again; family told after 60 min |
 | **Fall** | Free-fall on the band | A 30 s countdown, cancelled with a double-tap; otherwise an urgent alert to the family |
 | **Stove** | A daily check answered with a double-tap (optional speech: "I turned on the stove") | Alert if it's left on |
 | **Double-tap = "yes, I did it"** | Band tap event | Answers the latest question |

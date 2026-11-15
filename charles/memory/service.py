@@ -233,6 +233,18 @@ def handle_signal(kind, data=None, now=None, source="band"):
                 rules.resolve("flush", "flush heard", now)
                 rules.resolve("bathroom", "flush heard", now)
                 result = "toilet_flush"
+        elif kind in ("not_worn", "worn"):
+            was = (store.kv_get("wear") or {}).get("state")
+            if kind != was:
+                still = float(data.get("value") or 0)
+                since = now - still if kind == "not_worn" else now
+                store.kv_set("wear", {"state": kind, "since": since})
+                store.add_event(now, "band_off_wrist" if kind == "not_worn" else "band_on_wrist",
+                                "Band not on the wrist (dead still since %s)" % clock.hhmm(since) if kind == "not_worn"
+                                else "Band back on the wrist", data, source)
+                if kind == "worn":
+                    rules.resolve("offwrist", "band back on", now)
+            result = kind
         elif kind == "toilet_paper":
             store.add_event(now, kind, SIGNAL_TEXT[kind], data, "mic" if source == "band" else source)
             result = kind
@@ -454,6 +466,8 @@ def state():
         "phone": _phone_state(now),
         "bathroom": _bathroom_state(now),
         "water": _water_state(now),
+        "wear": {"state": (store.kv_get("wear") or {}).get("state") or "worn",
+                 "since": clock.hhmm((store.kv_get("wear") or {})["since"]) if (store.kv_get("wear") or {}).get("since") else None},
         "fall": {"active": bool(fall), "seconds_left": max(0, int(fall["deadline"] - now)) if fall else 0},
         "alerts": [_alert_view(a) for a in store.alerts(limit=50)],
         "calibration": store.kv_get("calib"),
